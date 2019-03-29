@@ -68,22 +68,23 @@ class Deffie_Hellman
         // }
         Deffie_Hellman()
         {
-            priv = SecByteBlock(dh.PrivateKeyLength());
-            pub = SecByteBlock(dh.PublicKeyLength());
-            aesGen = SecByteBlock(dh.AgreedValueLength());
             dh.AccessGroupParameters().GenerateRandomWithKeySize(rng, 1024);
             iPrime = dh.GetGroupParameters().GetModulus();
             iGenerator = dh.GetGroupParameters().GetSubgroupGenerator();
+            priv = SecByteBlock(dh.PrivateKeyLength());
+            pub = SecByteBlock(dh.PublicKeyLength());
+            aesGen = SecByteBlock(dh.AgreedValueLength());
             dh.GenerateKeyPair(rng, priv, pub);
         }
 
         Deffie_Hellman(Integer prime, Integer generator)
         {
+            dh = DH(prime, generator);
+            iPrime = dh.GetGroupParameters().GetModulus();
+            iGenerator = dh.GetGroupParameters().GetSubgroupGenerator();
             priv = SecByteBlock(dh.PrivateKeyLength());
             pub = SecByteBlock(dh.PublicKeyLength());
             aesGen = SecByteBlock(dh.AgreedValueLength());
-            iPrime = prime;
-            iGenerator = generator;
             dh.GenerateKeyPair(rng, priv, pub);
         }
 
