@@ -20,7 +20,7 @@ jobs:
       - checkout
       - run:
           name: Direct Test
-          command: 'g++ tests/dhtest.cpp -o dh_test -lcrypto++'
+          command: 'g++ tests/dhtest.cpp -std=c++11 -o dh_test -lcrypto++'
       - run:
           name: DH Testing
           command: './dh_test'
