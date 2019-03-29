@@ -19,6 +19,9 @@ jobs:
           command: 'sudo apt-get install -y libcrypto++-dev libcrypto++-doc libcrypto++-utils'
       - checkout
       - run:
+          name: Direct Test
+          command: 'g++ /tests/dhtest.cpp -o dhtest -lcrypto++'
+      - run:
           name: Creating Build Files
           command: 'cmake -H. -Bbuild'
       - run:
