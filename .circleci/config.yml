@@ -5,7 +5,6 @@ jobs:
     docker:
       - image: "debian:stretch"
     steps:
-      - checkout
       - run:
           name: Installing SUDO
           command: 'apt-get update && apt-get install -y sudo && rm -rf /var/lib/apt/lists/*'
@@ -17,19 +16,11 @@ jobs:
           command: 'apt-get update && sudo apt-get install -y cmake'
       - run:
           name: Install Crypto++
-          command: 'sudo apt-get install libcrypto++-dev libcrypto++-doc libcrypto++-utils'
+          command: 'sudo apt-get install -y libcrypto++-dev libcrypto++-doc libcrypto++-utils'
+      - checkout
       - run:
-          name: Creating Build Files
-          command: 'cmake -H. -Bbuild'
-      - run:
-          name: Creating Binary Files
-          command: 'cmake --build build'
-      - run:
-          name: My int test
-          command: './bin/myint_test'
-      - run:
-          name: Bank Testing
-          command: './bin/bank_test'
+          name: Direct Test
+          command: 'mkdir bin && g++ tests/dhtest.cpp -o bin/dh_test -lcrypto++'
       - run:
           name: DH Testing
           command: './bin/dh_test'
