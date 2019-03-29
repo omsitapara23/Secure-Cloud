@@ -20,19 +20,7 @@ jobs:
       - checkout
       - run:
           name: Direct Test
-          command: 'g++ tests/dhtest.cpp -o dhtest -lcrypto++'
-      - run:
-          name: Creating Build Files
-          command: 'cmake -H. -Bbuild'
-      - run:
-          name: Creating Binary Files
-          command: 'cmake --build build'
-      - run:
-          name: My int test
-          command: './bin/myint_test'
-      - run:
-          name: Bank Testing
-          command: './bin/bank_test'
+          command: 'mkdir bin && g++ tests/dhtest.cpp -o bin/dhtest -lcrypto++'
       - run:
           name: DH Testing
           command: './bin/dh_test'
