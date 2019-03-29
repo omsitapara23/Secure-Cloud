@@ -3,7 +3,7 @@
 
 cmake_minimum_required(VERSION 2.8)
 set(CMAKE_CXX_STANDARD 11)
-set (CMAKE_CXX_FLAGS "-lcrypto++")
+set (CMAKE_CXX_FLAGS "-Wall -O0 -g3 -l crypto++")
 project(cpp-cmake-circle-ci)
 
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
