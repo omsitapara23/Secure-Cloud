@@ -16,6 +16,9 @@ jobs:
           name: Install CMAKE
           command: 'apt-get update && sudo apt-get install -y cmake'
       - run:
+          name: Install Crypto++
+          command: 'sudo apt-get install libcrypto++-dev libcrypto++-doc libcrypto++-utils'
+      - run:
           name: Creating Build Files
           command: 'cmake -H. -Bbuild'
       - run:
@@ -27,3 +30,6 @@ jobs:
       - run:
           name: Bank Testing
           command: './bin/bank_test'
+      - run:
+          name: DH Testing
+          command: './bin/dh_test'
