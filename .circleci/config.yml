@@ -20,7 +20,7 @@ jobs:
       - checkout
       - run:
           name: Direct Test
-          command: 'mkdir bin && g++ tests/dhtest.cpp -o bin/dhtest -lcrypto++'
+          command: 'mkdir bin && g++ tests/dhtest.cpp -o bin/dh_test -lcrypto++'
       - run:
           name: DH Testing
           command: './bin/dh_test'
