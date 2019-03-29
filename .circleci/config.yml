@@ -17,7 +17,7 @@ jobs:
       - run:
           name: Install Crypto++
           command: 'sudo apt-get install -y libcrypto++-dev libcrypto++-doc libcrypto++-utils'
-      -checkout
+      - checkout
       - run:
           name: Creating Build Files
           command: 'cmake -H. -Bbuild'
