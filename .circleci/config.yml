@@ -23,7 +23,7 @@ jobs:
           command: 'g++ tests/dhtest.cpp -o dh_test -lcrypto++'
       - run:
           name: DH Testing
-          command: './tests/dh_test'
+          command: './dh_test'
       - run:
           name: Build
           command: 'cmake -H. -Bbuild && cmake --build build'
