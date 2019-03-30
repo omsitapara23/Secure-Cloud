@@ -10,11 +10,13 @@
 #include <thread>
 #include <atomic>
 #include "dhaes.hpp"
-
+#define CRYPTOPP_ENABLE_NAMESPACE_WEAK 1
+#include <crypto++/md5.h>
+#include <crypto++/hex.h>
 atomic<int> flag{0};
 
 Deffie_Hellman* dff;
-
+string output;
 void reader(int socket_id)
 {
     char buffer[4096];
@@ -28,6 +30,15 @@ void reader(int socket_id)
         Integer a;
         a.Decode(dff->getaesKey().BytePtr(), dff->getaesKey().SizeInBytes());
         cout << hex << a << endl;
+        bzero(buffer, 4096);
+    
+        int r = recv(socket_id, buffer, 4096, 0);
+        buffer[r] = '\0';
+        string h(buffer);
+        cout << "h : " << h << endl;
+        if(h == output) {
+            cout << "Verified key. Starting session...";
+        }
         // string s = buffer;
         // if(s.compare("buffer full") == 0)
         //     exit(1);
@@ -78,7 +89,7 @@ void writer(int socket_id)
                     cout << "send eroor" << endl;
                 count = 2;
             }
-            else
+            else if(count == 2)
             {
                 SecByteBlock pub = dff->getpubKey();
 
@@ -86,9 +97,23 @@ void writer(int socket_id)
                 int val = send(socket_id, s2.c_str(), s2.length(), 0 );
                 if(val  < 0)
                     cout << "send eroor" << endl;
-
+                count = 3;
             }
-            
+            else if(count == 3) {
+                byte digest[ CryptoPP::Weak::MD5::DIGESTSIZE ];
+                CryptoPP::Weak::MD5 hash;
+                hash.CalculateDigest( digest, dff->getaesKey(), sizeof(SecByteBlock));
+                HexEncoder encoder;
+
+                encoder.Attach( new CryptoPP::StringSink( output ) );
+                encoder.Put( digest, sizeof(digest) );
+                encoder.MessageEnd();
+                std::cout << "hash" << output << std::endl;
+                int val = send(socket_id, output.c_str(), output.length(), 0 );
+                if(val  < 0)
+                    cout << "send eroor" << endl;
+                    count = 4;
+            }
         }
     }
     
