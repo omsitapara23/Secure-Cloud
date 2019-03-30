@@ -16,3 +16,10 @@ TEST_CASE("UTILSITnt thest", "[integerhex]") {
     Integer puba = alice.getPrime();
     REQUIRE(puba == utils::stringHexToInteger(utils::IntegerTohexString(puba)));
 }
+
+TEST_CASE("UTILShash thest", "[hash]") {
+    Deffie_Hellman alice;
+    Deffie_Hellman bob(alice.getPrime(), alice.getGenerator());
+    SecByteBlock puba = alice.getpubKey();
+    REQUIRE(utils::findMD5(puba) == utils::findMD5(puba));
+}

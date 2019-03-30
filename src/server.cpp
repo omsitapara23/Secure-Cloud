@@ -217,8 +217,6 @@ int main()
             if (FD_ISSET( curr_soc , &scoket_descriptor))  
             { 
                 //checking if some one disconnected
-                if(count == 3)
-                    bzero(buffer, 4096);
                 if ((string_length = read( curr_soc , buffer, 4096)) == 0)  
                 {  
 
@@ -232,31 +230,37 @@ int main()
                 //receviving the message came in
                 else
                 {  
-                    cout << "Broadcasting : " << buffer << endl;
                     if(count == 0)
                     {
                         buffer[string_length] = '\0';
                         string l(buffer);
-                        cout << l << endl;
                         prime = Integer(l.c_str());
+                        cout << "p : " << prime << endl;
                         count = 1;
                     }
                     else if (count == 1)
                     {
                         buffer[string_length] = '\0';
                         generator = Integer(buffer);
+                        cout << "g : " << generator << endl;
+
                         count = 2;
                     }
                     else if(count == 2)
                     {
                         buffer[string_length] = '\0';
                         string lawl(buffer);
+                        cout << "pub  rec : " << lawl << endl;
                         SecByteBlock pubO((const byte*)lawl.data(), lawl.size());
                         cout << "herer" << endl;
                         dh2 = new Deffie_Hellman(prime, generator);
                         cout << "herer" << endl;
 
-                        dh2->AgreeFunc(pubO);
+                        bool result = dh2->AgreeFunc(pubO);
+                        if(!result)
+                        {
+                            cout << "Agreeemnet failed " << endl;
+                        }
                         cout << "herer" << endl;
 
                         Integer a;
@@ -272,6 +276,7 @@ int main()
                     
                     }
                     else {
+                        buffer[string_length] = '\0';
                         string h(buffer);
                         byte digest[ CryptoPP::Weak::MD5::DIGESTSIZE ];
                         CryptoPP::Weak::MD5 hash;

@@ -4,6 +4,7 @@
 #include <iostream>
 #include <iomanip>
 #include "dhaes.hpp"
+#define CRYPTOPP_ENABLE_NAMESPACE_WEAK 1
 #include <crypto++/md5.h>
 #include <crypto++/hex.h>
 
@@ -35,6 +36,19 @@ class utils
         {
             Integer out(s.c_str());
             return out;
+        }
+
+        static string findMD5(SecByteBlock key)
+        {
+            byte digest[ CryptoPP::Weak::MD5::DIGESTSIZE ];
+            CryptoPP::Weak::MD5 hash;
+            hash.CalculateDigest( digest, key, sizeof(SecByteBlock));
+            HexEncoder encoder;
+            std::string output;
+            encoder.Attach( new CryptoPP::StringSink( output ) );
+            encoder.Put( digest, sizeof(digest) );
+            encoder.MessageEnd();
+            return output;
         }
         
 

@@ -94,6 +94,7 @@ void writer(int socket_id)
                 SecByteBlock pub = dff->getpubKey();
 
                 string  s2((const char*)pub.data(),pub.size());
+                cout << "pub : " << s2 << endl;
                 int val = send(socket_id, s2.c_str(), s2.length(), 0 );
                 if(val  < 0)
                     cout << "send eroor" << endl;
