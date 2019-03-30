@@ -10,9 +10,7 @@
 #include <thread>
 #include <atomic>
 #include "dhaes.hpp"
-#define CRYPTOPP_ENABLE_NAMESPACE_WEAK 1
-#include <crypto++/md5.h>
-#include <crypto++/hex.h>
+#include "utils.hpp"
 using namespace std;
 
 atomic<int> total_Conn{0};
@@ -234,14 +232,14 @@ int main()
                     {
                         buffer[string_length] = '\0';
                         string l(buffer);
-                        prime = Integer(l.c_str());
+                        prime = utils::stringHexToInteger(l);
                         cout << "p : " << prime << endl;
                         count = 1;
                     }
                     else if (count == 1)
                     {
                         buffer[string_length] = '\0';
-                        generator = Integer(buffer);
+                        generator = utils::stringHexToInteger(buffer);
                         cout << "g : " << generator << endl;
 
                         count = 2;
@@ -251,7 +249,7 @@ int main()
                         buffer[string_length] = '\0';
                         string lawl(buffer);
                         cout << "pub  rec : " << lawl << endl;
-                        SecByteBlock pubO((const byte*)lawl.data(), lawl.size());
+                        SecByteBlock pubO = utils::stringToSecByte(lawl);
                         cout << "herer" << endl;
                         dh2 = new Deffie_Hellman(prime, generator);
                         cout << "herer" << endl;
@@ -268,7 +266,7 @@ int main()
                         cout << hex << a << endl;
                         SecByteBlock pub = dh2->getpubKey();
 
-                        string  s2((const char*)pub.data(),pub.size());
+                        string  s2 = utils::SecByteToString(pub);
                         int val = send(client_socket[i], s2.c_str(), s2.length(), 0 );
                         if(val  < 0)
                             cout << "send eroor" << endl;
@@ -278,14 +276,7 @@ int main()
                     else {
                         buffer[string_length] = '\0';
                         string h(buffer);
-                        byte digest[ CryptoPP::Weak::MD5::DIGESTSIZE ];
-                        CryptoPP::Weak::MD5 hash;
-                        hash.CalculateDigest( digest, dh2->getaesKey(), sizeof(SecByteBlock));
-                        HexEncoder encoder;
-                        std::string output;
-                        encoder.Attach( new CryptoPP::StringSink( output ) );
-                        encoder.Put( digest, sizeof(digest) );
-                        encoder.MessageEnd();
+                        string output = utils::findMD5(dh2->getaesKey());
                         std::cout << "hash : " << output << std::endl;
                         cout << "h : " << h << endl;
                         if(h == output) {

@@ -10,13 +10,11 @@
 #include <thread>
 #include <atomic>
 #include "dhaes.hpp"
-#define CRYPTOPP_ENABLE_NAMESPACE_WEAK 1
-#include <crypto++/md5.h>
-#include <crypto++/hex.h>
+#include "utils.hpp"
 atomic<int> flag{0};
 
 Deffie_Hellman* dff;
-string output;
+
 void reader(int socket_id)
 {
     char buffer[4096];
@@ -30,13 +28,14 @@ void reader(int socket_id)
         Integer a;
         a.Decode(dff->getaesKey().BytePtr(), dff->getaesKey().SizeInBytes());
         cout << hex << a << endl;
-        bzero(buffer, 4096);
-    
+
         int r = recv(socket_id, buffer, 4096, 0);
         buffer[r] = '\0';
         string h(buffer);
         cout << "h : " << h << endl;
-        if(h == output) {
+        string output = utils::findMD5(dff->getaesKey());
+        cout << "out " << output << endl;
+        if(h.compare(output) == 0) {
             cout << "Verified key. Starting session...";
         }
         // string s = buffer;
@@ -62,15 +61,9 @@ void writer(int socket_id)
         }
         else
         {
-            stringstream ss;
-            stringstream sss;
             if(count == 0)
             {
-
-                Integer prime = dff->getPrime();
-                cout << "P :" << dff->getPrime() << endl;
-                ss << hex << prime;
-                string s2 = ss.str();
+                string s2 = utils::IntegerTohexString(dff->getPrime());
 
                 int val = send(socket_id, s2.c_str(), s2.length(), 0 );
                 if(val  < 0)
@@ -79,9 +72,8 @@ void writer(int socket_id)
             }
             else if(count == 1)
             {
-                Integer prime = dff->getGenerator();
-                sss << hex << prime;
-                string s2 = sss.str();
+
+                string s2 = utils::IntegerTohexString(dff->getGenerator());
                 cout << s2 << endl;
 
                 int val = send(socket_id, s2.c_str(), s2.length(), 0 );
@@ -91,9 +83,8 @@ void writer(int socket_id)
             }
             else if(count == 2)
             {
-                SecByteBlock pub = dff->getpubKey();
 
-                string  s2((const char*)pub.data(),pub.size());
+                string  s2 = utils::SecByteToString(dff->getpubKey());
                 cout << "pub : " << s2 << endl;
                 int val = send(socket_id, s2.c_str(), s2.length(), 0 );
                 if(val  < 0)
@@ -101,14 +92,8 @@ void writer(int socket_id)
                 count = 3;
             }
             else if(count == 3) {
-                byte digest[ CryptoPP::Weak::MD5::DIGESTSIZE ];
-                CryptoPP::Weak::MD5 hash;
-                hash.CalculateDigest( digest, dff->getaesKey(), sizeof(SecByteBlock));
-                HexEncoder encoder;
-
-                encoder.Attach( new CryptoPP::StringSink( output ) );
-                encoder.Put( digest, sizeof(digest) );
-                encoder.MessageEnd();
+                
+                string output = utils::findMD5(dff->getaesKey());
                 std::cout << "hash" << output << std::endl;
                 int val = send(socket_id, output.c_str(), output.length(), 0 );
                 if(val  < 0)
