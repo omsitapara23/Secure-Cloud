@@ -10,7 +10,9 @@
 #include <thread>
 #include <atomic>
 #include "dhaes.hpp"
-
+#define CRYPTOPP_ENABLE_NAMESPACE_WEAK 1
+#include <crypto++/md5.h>
+#include <crypto++/hex.h>
 using namespace std;
 
 atomic<int> total_Conn{0};
@@ -84,7 +86,7 @@ int main()
     Integer prime;
     Integer generator;
     SecByteBlock pub0;
-
+    Deffie_Hellman * dh2;
 
     struct sockaddr_in sever_address;
     char buffer[1025];
@@ -215,7 +217,8 @@ int main()
             if (FD_ISSET( curr_soc , &scoket_descriptor))  
             { 
                 //checking if some one disconnected
-                
+                if(count == 3)
+                    bzero(buffer, 4096);
                 if ((string_length = read( curr_soc , buffer, 4096)) == 0)  
                 {  
 
@@ -229,53 +232,64 @@ int main()
                 //receviving the message came in
                 else
                 {  
+                    cout << "Broadcasting : " << buffer << endl;
                     if(count == 0)
                     {
                         buffer[string_length] = '\0';
                         string l(buffer);
                         cout << l << endl;
                         prime = Integer(l.c_str());
-                        cout << "prime : " << prime << endl;
                         count = 1;
                     }
                     else if (count == 1)
                     {
                         buffer[string_length] = '\0';
                         generator = Integer(buffer);
-                        cout << "gejerator : " << generator << endl;
-
                         count = 2;
                     }
-                    else
+                    else if(count == 2)
                     {
-                        
                         buffer[string_length] = '\0';
                         string lawl(buffer);
                         SecByteBlock pubO((const byte*)lawl.data(), lawl.size());
                         cout << "herer" << endl;
-                        Deffie_Hellman dh2(prime, generator);
+                        dh2 = new Deffie_Hellman(prime, generator);
                         cout << "herer" << endl;
 
-                        bool res =dh2.AgreeFunc(pubO);
-                        if(res == false)
-                        {
-                            cout << "Agreement failed" << endl;
-                        }
+                        dh2->AgreeFunc(pubO);
                         cout << "herer" << endl;
 
                         Integer a;
-                        a.Decode(dh2.getaesKey().BytePtr(), dh2.getaesKey().SizeInBytes());
-                        cout << "key" << hex << a << endl;
-                        SecByteBlock pub = dh2.getpubKey();
+                        a.Decode(dh2->getaesKey().BytePtr(), dh2->getaesKey().SizeInBytes());
+                        cout << hex << a << endl;
+                        SecByteBlock pub = dh2->getpubKey();
 
                         string  s2((const char*)pub.data(),pub.size());
                         int val = send(client_socket[i], s2.c_str(), s2.length(), 0 );
                         if(val  < 0)
                             cout << "send eroor" << endl;
-                    
+                        count = 3;
                     
                     }
-                    
+                    else {
+                        string h(buffer);
+                        byte digest[ CryptoPP::Weak::MD5::DIGESTSIZE ];
+                        CryptoPP::Weak::MD5 hash;
+                        hash.CalculateDigest( digest, dh2->getaesKey(), sizeof(SecByteBlock));
+                        HexEncoder encoder;
+                        std::string output;
+                        encoder.Attach( new CryptoPP::StringSink( output ) );
+                        encoder.Put( digest, sizeof(digest) );
+                        encoder.MessageEnd();
+                        std::cout << "hash : " << output << std::endl;
+                        cout << "h : " << h << endl;
+                        if(h == output) {
+                            cout << "verified Secret Key. Starting Session..." << endl;
+                        }
+                        int val = send(client_socket[i], output.c_str(), output.length(), 0 );
+                        if(val  < 0)
+                            cout << "send eroor" << endl;
+                    }
                     
                 }  
             }  
@@ -286,6 +300,3 @@ int main()
     close(server_socket);
 
 }
-
-
-
