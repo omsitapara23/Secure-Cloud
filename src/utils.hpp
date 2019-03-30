@@ -60,6 +60,31 @@ class utils
             bytes.resize(encodedSize);
             x.Encode(bytes.BytePtr(), encodedSize, Integer::UNSIGNED);
         }   
+
+        static void aesEncryption(SecByteBlock key, char* message, int messageLen)
+        {
+            AutoSeededRandomPool arngA;
+            int aesKeyLength = SHA256::DIGESTSIZE; // 32 bytes = 256 bit key
+            int defBlockSize = AES::BLOCKSIZE;
+            // Generate a random IV
+            byte iv[AES::BLOCKSIZE];
+            memset( iv, 0x00, CryptoPP::AES::BLOCKSIZE );
+            // arngA.GenerateBlock(iv, AES::BLOCKSIZE);    
+            CFB_Mode<AES>::Encryption cfbEncryption(key, aesKeyLength, iv);
+            cfbEncryption.ProcessData((byte*)message, (byte*)message, messageLen);
+            
+        }
+
+        static void aesDecryption(SecByteBlock key, char* message, int messageLen)
+        {
+            int aesKeyLength = SHA256::DIGESTSIZE; // 32 bytes = 256 bit key
+            int defBlockSize = AES::BLOCKSIZE;
+            // Generate a random IV
+            byte iv[AES::BLOCKSIZE];
+            memset( iv, 0x00, CryptoPP::AES::BLOCKSIZE );
+            CFB_Mode<AES>::Decryption cfbDecryption(key, aesKeyLength, iv);
+            cfbDecryption.ProcessData((byte*)message, (byte*)message, messageLen);
+        }
         
 
 };

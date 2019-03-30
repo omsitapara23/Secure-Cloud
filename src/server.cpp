@@ -274,7 +274,7 @@ int main()
                         count = 3;
                     
                     }
-                    else {
+                    else if(count == 3) {
                         buffer[string_length] = '\0';
                         string h(buffer);
                         string output = utils::findMD5(dh2->getaesKey());
@@ -286,6 +286,14 @@ int main()
                         int val = send(client_socket[i], output.c_str(), output.length(), 0 );
                         if(val  < 0)
                             cout << "send eroor" << endl;
+                        count = 4;
+                    }
+                    else
+                    {
+                        buffer[string_length] = '\0';
+                        cout << "enc : " << buffer << endl;
+                        utils::aesDecryption(dh2->getaesShaKey(), buffer, 16);
+                        cout << "d : " << buffer << endl;
                     }
                     
                 }  

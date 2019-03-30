@@ -101,6 +101,19 @@ void writer(int socket_id)
                     cout << "send eroor" << endl;
                     count = 4;
             }
+            else 
+            {
+                char s[] = "om and shubham";
+                cout << s << endl;
+                int length = (int)strlen(s)+ 1;
+                cout << length << endl;
+                utils::aesEncryption(dff->getaesShaKey(), s, length);
+                cout << s << endl;
+                int val = send(socket_id, s, strlen(s) + 1, 0 );
+                if(val  < 0)
+                    cout << "send eroor" << endl;
+                    count = 5;
+            }
         }
     }
     
