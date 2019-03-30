@@ -22,6 +22,9 @@ jobs:
           name: Build Client
           command: 'g++ src/client.cpp -std=c++11 -o c -lpthread -lcrypto++ && rm c'
       - run:
+          name: Build Server
+          command: 'g++ src/server.cpp -std=c++11 -o s -lpthread -lcrypto++ && rm s'
+      - run:
           name: Direct Test
           command: 'mkdir bin && g++ tests/dhtest.cpp -o bin/dh_test -lcrypto++'
       - run:
