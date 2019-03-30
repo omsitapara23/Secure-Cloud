@@ -13,14 +13,18 @@ class utils
     public:
         static string SecByteToString(SecByteBlock block)
         {
-            string s((const char*)block.data(), block.size());
-            return s;
+            Integer a;
+            a.Decode(block.BytePtr(), block.SizeInBytes());
+            cout << " conv : " << a << endl;
+            return IntegerTohexString(a);
         }
 
         static SecByteBlock stringToSecByte(string s)
         {
-            SecByteBlock block((const byte*)s.data(), s.size());
-            return block;
+            Integer a = stringHexToInteger(s);
+            SecByteBlock out;
+            UnsignedIntegerToByteBlock(a, out);
+            return out;
 
         }
 
@@ -50,6 +54,12 @@ class utils
             encoder.MessageEnd();
             return output;
         }
+        static void UnsignedIntegerToByteBlock(const Integer& x, SecByteBlock& bytes)
+        {
+            size_t encodedSize = x.MinEncodedSize(Integer::UNSIGNED);
+            bytes.resize(encodedSize);
+            x.Encode(bytes.BytePtr(), encodedSize, Integer::UNSIGNED);
+        }   
         
 
 };

@@ -23,7 +23,8 @@ void reader(int socket_id)
         int read_val = recv(socket_id, buffer, 4096, 0);
         buffer[read_val] = '\0';
         string lawl(buffer);
-        SecByteBlock pubO((const byte*)lawl.data(), lawl.size());
+        SecByteBlock pubO = utils::stringToSecByte(lawl);
+        cout << "recived pub : " << lawl << endl;
         dff->AgreeFunc(pubO);
         Integer a;
         a.Decode(dff->getaesKey().BytePtr(), dff->getaesKey().SizeInBytes());

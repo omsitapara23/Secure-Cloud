@@ -267,6 +267,7 @@ int main()
                         SecByteBlock pub = dh2->getpubKey();
 
                         string  s2 = utils::SecByteToString(pub);
+                        cout << "sending pub : " << s2 << endl;
                         int val = send(client_socket[i], s2.c_str(), s2.length(), 0 );
                         if(val  < 0)
                             cout << "send eroor" << endl;
