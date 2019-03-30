@@ -26,7 +26,11 @@ jobs:
           command: 'g++ src/server.cpp -std=c++11 -o s -lpthread -lcrypto++ && rm s'
       - run:
           name: Direct Test
-          command: 'mkdir bin && g++ tests/dhtest.cpp -o bin/dh_test -lcrypto++'
+          command: 'mkdir bin && g++ tests/dhtest.cpp -o bin/dh_test -lcrypto++ && g++ tests/utilsTest.cpp -o bin/util_test -lcrypto++'
       - run:
           name: DH Testing
           command: './bin/dh_test'
+      - run:
+          name: Util Testing
+          command: './bin/util_test'
+       
