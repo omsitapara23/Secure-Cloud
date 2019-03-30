@@ -229,19 +229,21 @@ int main()
                 //receviving the message came in
                 else
                 {  
-                    cout << "Broadcasting : " << buffer << endl;
                     if(count == 0)
                     {
                         buffer[string_length] = '\0';
                         string l(buffer);
                         cout << l << endl;
                         prime = Integer(l.c_str());
+                        cout << "prime : " << prime << endl;
                         count = 1;
                     }
                     else if (count == 1)
                     {
                         buffer[string_length] = '\0';
                         generator = Integer(buffer);
+                        cout << "gejerator : " << generator << endl;
+
                         count = 2;
                     }
                     else
@@ -254,12 +256,16 @@ int main()
                         Deffie_Hellman dh2(prime, generator);
                         cout << "herer" << endl;
 
-                        dh2.AgreeFunc(pubO);
+                        bool res =dh2.AgreeFunc(pubO);
+                        if(res == false)
+                        {
+                            cout << "Agreement failed" << endl;
+                        }
                         cout << "herer" << endl;
 
                         Integer a;
                         a.Decode(dh2.getaesKey().BytePtr(), dh2.getaesKey().SizeInBytes());
-                        cout << hex << a << endl;
+                        cout << "key" << hex << a << endl;
                         SecByteBlock pub = dh2.getpubKey();
 
                         string  s2((const char*)pub.data(),pub.size());
