@@ -19,6 +19,9 @@ jobs:
           command: 'sudo apt-get install -y libcrypto++-dev libcrypto++-doc libcrypto++-utils'
       - checkout
       - run:
+          name: Build Client
+          command: 'g++ src/client.cpp -std=c++11 -o c -lpthread -lcrypto++ && rm c'
+      - run:
           name: Direct Test
           command: 'mkdir bin && g++ tests/dhtest.cpp -o bin/dh_test -lcrypto++'
       - run:
