@@ -66,6 +66,17 @@ void accepter(vector<int> client, int socket_id, struct sockaddr_in server_addre
     }
 }
 
+struct client_soc
+{
+    int fd;
+    int count;
+    client_soc()
+    {
+        count = 0;
+        fd = 0;
+    }
+};
+
 int main()
 {
     int n;
@@ -73,14 +84,13 @@ int main()
     cin >> n;
     int server_socket;
     int option = 1;
-    int client_socket[n];
+    client_soc client_socket[n];
     int max_clients = n;
     int activity, i , string_length , curr_soc;
     int sever_address_length , new_socket, max_sd;
     int sender, receiver;
     int channels = 0;
     int marker = 0;
-    int count = 0;
     Integer prime;
     Integer generator;
     SecByteBlock pub0;
@@ -93,10 +103,10 @@ int main()
 
     string message;
 
-    for (i = 0; i < max_clients; i++)  
-    {  
-        client_socket[i] = 0; 
-    } 
+    // for (i = 0; i < max_clients; i++)  
+    // {  
+    //     client_socket[i].fd = 0; 
+    // } 
 
     //creating the server socket
     if( (server_socket = socket(AF_INET , SOCK_STREAM , 0)) == 0)  
@@ -150,7 +160,7 @@ int main()
         for ( i = 0 ; i < max_clients ; i++)  
         {  
             //socket for each client
-            curr_soc = client_socket[i];  
+            curr_soc = client_socket[i].fd;  
                 
             //if the scoket is readable than add to read list
             if(curr_soc > 0)  
@@ -190,10 +200,10 @@ int main()
             for (i = 0; i < max_clients; i++)  
             {  
                 //adding to first non-empty position
-                if( client_socket[i] == 0 )  
+                if( client_socket[i].fd == 0 )  
                 {  
                     cout << "New Client starting handshake.. " << endl;
-                    client_socket[i] = new_socket;   
+                    client_socket[i].fd = new_socket;   
                     total_Conn++;  
                     isget = 1 ;
                     break;  
@@ -210,7 +220,7 @@ int main()
         for (i = 0; i < max_clients; i++)  
         {                          // for(int i = 0; i < conns.size(); i++)
                         //     channels[i] = 0;
-            curr_soc = client_socket[i];  
+            curr_soc = client_socket[i].fd;  
                 
             if (FD_ISSET( curr_soc , &scoket_descriptor))  
             { 
@@ -220,7 +230,7 @@ int main()
 
                     getpeername(curr_soc , (struct sockaddr*)&sever_address ,(socklen_t*)&sever_address_length);  
                     close(curr_soc);  
-                    client_socket[i] = 0; 
+                    client_socket[i].fd = 0; 
                     cout << "Client : " << i << "disconnected " << endl;
                     total_Conn--;
                 }  
@@ -228,32 +238,32 @@ int main()
                 //receviving the message came in
                 else
                 {  
-                    if(count == 0)
+                    if(client_socket[i].count == 0)
                     {
-                        count = 1;
+                        client_socket[i].count = 1;
                         cout << "Starting Deffie-Hellman for AES key generation.." << endl;
                         buffer[string_length] = '\0';
                         string l(buffer);
                         prime = utils::stringHexToInteger(l);
                         string s = "prime";
-                        int val = send(client_socket[i], s.c_str(), s.length(), 0 );
+                        int val = send(client_socket[i].fd, s.c_str(), s.length(), 0 );
                         if(val  < 0)
                             cout << "send eroor" << endl;
                     }
-                    else if (count == 1)
+                    else if (client_socket[i].count == 1)
                     {
-                        count = 2;
+                        client_socket[i].count = 2;
                         buffer[string_length] = '\0';
                         generator = utils::stringHexToInteger(buffer);
                         string s = "gen";
-                        int val = send(client_socket[i], s.c_str(), s.length(), 0 );
+                        int val = send(client_socket[i].fd, s.c_str(), s.length(), 0 );
                         if(val  < 0)
                             cout << "send eroor" << endl;
 
                     }
-                    else if(count == 2)
+                    else if(client_socket[i].count == 2)
                     {
-                        count = 3;
+                        client_socket[i].count = 3;
                         buffer[string_length] = '\0';
                         string lawl(buffer);
                         SecByteBlock pubO = utils::stringToSecByte(lawl);
@@ -270,13 +280,13 @@ int main()
                         SecByteBlock pub = dh2->getpubKey();
 
                         string  s2 = utils::SecByteToString(pub);
-                        int val = send(client_socket[i], s2.c_str(), s2.length(), 0 );
+                        int val = send(client_socket[i].fd, s2.c_str(), s2.length(), 0 );
                         if(val  < 0)
                             cout << "pub send eroor" << endl;
                     
                     }
-                    else if(count == 3) {
-                        count = 4;
+                    else if(client_socket[i].count == 3) {
+                        client_socket[i].count = 4;
                         cout << "Starting AES key verification.." << endl;
                         buffer[string_length] = '\0';
                         string h(buffer);
@@ -289,7 +299,7 @@ int main()
                             cout << "Verification failed" << endl;
                         }
                         
-                        int val = send(client_socket[i], output.c_str(), output.length(), 0 );
+                        int val = send(client_socket[i].fd, output.c_str(), output.length(), 0 );
                         if(val  < 0)
                             cout << "send eroor" << endl;
                     }
