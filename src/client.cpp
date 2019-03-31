@@ -17,6 +17,7 @@ Deffie_Hellman* dff;
 bool agreed = false;
 bool prime = false;
 bool gen = false;
+int tcp_port;
 void reader(int socket_id)
 {
     char buffer[4096];
@@ -59,6 +60,13 @@ void reader(int socket_id)
             cout << "Handshake failed " << endl;
             exit(2);
         }
+
+        r = recv(socket_id, buffer, 4096, 0);
+        buffer[r] = '\0';
+        string po(buffer);
+        tcp_port = stoi(po);
+        cout << "New port " << tcp_port << endl;
+        flag = false;
         
 
     }
@@ -111,7 +119,7 @@ void writer(int socket_id)
             char s[] = "om and shubham";
             int length = (int)strlen(s)+ 1;
             utils::aesEncryption(dff->getaesShaKey(), s, length);
-            int val = send(socket_id, s, strlen(s) + 1, 0 );
+            int val = send(socket_id, s, length, 0 );
             if(val  < 0)
                 cout << "send eroor" << endl;
             count = 5;
@@ -150,6 +158,39 @@ int main()
 
     readerth.join();
     writerth.join();
+
+    socket_id = socket(AF_INET, SOCK_STREAM, 0);
+    if(socket_id  == 0)
+    {
+        printf("Socket Error\n");
+    }
+
+    result = inet_pton(AF_INET, "127.0.0.1", &server_addr.sin_addr);
+    if(result < 0)
+        printf("error for inet_pton");
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons(tcp_port);
+
+    connection = connect(socket_id, (struct sockaddr *)&server_addr, sizeof(server_addr));
+    if(connection < 0)
+        printf("Connection error\n");
+
+    string iinput;
+    while(true)
+    {
+        cin >> input;
+        cout << "Sending : " << input << endl;
+        int len = input.length();
+        char message[len + 1];
+        strcpy(message, input.c_str());
+        int length = (int)strlen(message)+ 1;
+        utils::aesEncryption(dff->getaesShaKey(), message, length);
+        int val = send(socket_id, message, length, 0 );
+        if(val  < 0)
+            cout << "send eroor" << endl;
+
+    }
+
 
    
     return 0;
