@@ -18,7 +18,7 @@ using namespace std;
 atomic<int> total_Conn{0};
 atomic<int> port;
 mutex mtx;
-
+fstream f;
 map<string, string> uname_pass;
 
 struct client_soc
@@ -30,16 +30,17 @@ struct client_soc
     SecByteBlock pub0;
     Deffie_Hellman * dh2;
     string dir;
+    bool logged_in;
     client_soc()
     {
         count = 0;
         fd = 0;
         dir = "";
-        
+        logged_in = false;
     }
 };
 
-void  parser_request(string request)
+void parser_request(string request, int client_socket, client_soc * client)
 {
     string type = "";
     int i = 0;
@@ -70,12 +71,52 @@ void  parser_request(string request)
         string hashuname = utils::findMD5(uname);
         string hashpass = utils::findMD5(password);
         uname_pass[hashuname] = hashpass;
+        f << hashuname << endl;
+        f << hashpass << endl;
         string dir_make = "server_data/" + hashuname;
         if (mkdir(dir_make.c_str(), 0777) == -1) 
             cerr << "Error :  " << strerror(errno) << endl; 
         else
             cout << "Directory created";    
 
+    }
+    else if(type == "LOGIN") {
+        string uname = "";
+        while(request[i] != '|')
+        {
+            uname += request[i];
+            i++;
+        }
+        i++;
+        cout << "Uname : " << uname << endl;
+        string password = "";
+        while(request[i] != '|')
+        {
+            password += request[i];
+            i++;
+        }
+        string hashuname = utils::findMD5(uname);
+        string hashpass = utils::findMD5(password);
+        if(uname_pass.find(hashuname) == uname_pass.end()) {
+            string err = "LOGIN Failed : Error : User " + uname + " does not exist.";
+            cout << err << endl;
+            send(client_socket, err.c_str(), err.length(), 0);
+            client->logged_in = false;
+            return;
+        }
+        if(uname_pass[hashuname] != hashpass) {
+            string err = "LOGIN Failed : Error : wrong password for User : " + uname;
+            cout << err << endl;
+            send(client_socket, err.c_str(), err.length(), 0);
+            client->logged_in = false;
+            return;
+        } else {
+            string str = "LOGIN Successful : Further requests can be served.";
+            cout << str << endl;
+            send(client_socket, str.c_str(), str.length(), 0);
+            client->logged_in = true;
+            return;
+        }
     }
 }
 
@@ -148,7 +189,7 @@ void client_runner_th(client_soc client)
             utils::aesDecryption(client.dh2->getaesShaKey(), buffer, string_length);
             cout << "d : " << buffer << endl;
             string request(buffer);
-            parser_request(request);
+            parser_request(request, client_socket, &client);
         }
     }
 
@@ -173,8 +214,15 @@ int main()
     int sender, receiver;
     int channels = 0;
     int marker = 0;
-    
-
+    string u,p;
+    f.open("server_data/uname_pass.txt", ios::in);
+    while(!f.eof()) {
+        f >> u;
+        f >> p;
+        uname_pass[u] = p;
+    }
+    f.close();
+    f.open("server_data/uname_pass.txt", ios::out | ios::app);
     struct sockaddr_in sever_address;
     char buffer[4096];
 

@@ -12,7 +12,6 @@
 #include "dhaes.hpp"
 #include "utils.hpp"
 atomic<int> flag{0};
-
 Deffie_Hellman* dff;
 bool agreed = false;
 bool prime = false;
@@ -147,7 +146,16 @@ string create_user()
     string to = "CREATE|" + username + "|" + password + "|"; 
     return to;
 }
-
+string user_login() {
+    string username;
+    string password;
+    cout << "Please Enter your user name : ";
+    cin >> username;
+    cout << "Please Enter your password : ";
+    cin >> password;
+    string to = "LOGIN|" + username + "|" + password + "|"; 
+    return to;
+}
 int main()
 {
     dff = new Deffie_Hellman;
@@ -212,7 +220,22 @@ int main()
                 cout << "send eroor" << endl;   
 
         }
-        
+        if(input == 2) {
+            char buffer[1000] = {0};
+            string to_send = user_login();
+            cout << "Sending : " << to_send << endl;
+            int len = to_send.length();
+            char message[len + 1];
+            strcpy(message, to_send.c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(dff->getaesShaKey(), message, length);
+            int val = send(socket_id, message, length, 0 );
+            if(val  < 0)
+                cout << "send eroor" << endl;   
+            recv(socket_id, buffer, 1000, 0);
+            string recv_msg(buffer);
+            cout << recv_msg << endl;
+        }
 
     }
 
