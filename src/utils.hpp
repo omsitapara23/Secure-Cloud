@@ -53,6 +53,21 @@ class utils
             encoder.MessageEnd();
             return output;
         }
+        static string findMD5(string message)
+        {
+            byte digest[ CryptoPP::Weak::MD5::DIGESTSIZE ];
+
+            CryptoPP::Weak::MD5 hash;
+            hash.CalculateDigest( digest, (const byte*)message.c_str(), message.length() );
+
+            HexEncoder encoder;
+            std::string output;
+
+            encoder.Attach( new CryptoPP::StringSink( output ) );
+            encoder.Put( digest, sizeof(digest) );
+            encoder.MessageEnd();
+            return output;
+        }
         static void UnsignedIntegerToByteBlock(const Integer& x, SecByteBlock& bytes)
         {
             size_t encodedSize = x.MinEncodedSize(Integer::UNSIGNED);
