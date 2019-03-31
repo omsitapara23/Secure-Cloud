@@ -14,34 +14,52 @@
 atomic<int> flag{0};
 
 Deffie_Hellman* dff;
-
+bool agreed = false;
+bool prime = false;
+bool gen = false;
 void reader(int socket_id)
 {
     char buffer[4096];
+    int r;
     while(flag)
     {
+        r = recv(socket_id, buffer, 4096, 0);
+        buffer[r] = '\0';
+        string p(buffer);
+        if(p == "prime")
+        {
+            prime = true;
+        }
+
+        r = recv(socket_id, buffer, 4096, 0);
+        buffer[r] = '\0';
+        string g(buffer);
+        if(g == "gen")
+        {
+            gen = true;
+        }
+
         int read_val = recv(socket_id, buffer, 4096, 0);
         buffer[read_val] = '\0';
         string lawl(buffer);
         SecByteBlock pubO = utils::stringToSecByte(lawl);
-        cout << "recived pub : " << lawl << endl;
         dff->AgreeFunc(pubO);
-        Integer a;
-        a.Decode(dff->getaesKey().BytePtr(), dff->getaesKey().SizeInBytes());
-        cout << hex << a << endl;
+        agreed = true;
+        cout << "Deffie-Hellman completed AES key generated " << endl; 
 
-        int r = recv(socket_id, buffer, 4096, 0);
+        r = recv(socket_id, buffer, 4096, 0);
         buffer[r] = '\0';
         string h(buffer);
-        cout << "h : " << h << endl;
         string output = utils::findMD5(dff->getaesKey());
-        cout << "out " << output << endl;
-        if(h.compare(output) == 0) {
-            cout << "Verified key. Starting session...";
+        if(h == output) {
+            cout << "Verified key. Starting session..." << endl;
         }
-        // string s = buffer;
-        // if(s.compare("buffer full") == 0)
-        //     exit(1);
+        else
+        {
+            cout << "Handshake failed " << endl;
+            exit(2);
+        }
+        
 
     }
 }
@@ -51,56 +69,52 @@ void writer(int socket_id)
 {
     string input;
     int count = 0;
+    cout << "Starting Handshake Protcol..." << endl;
     while(flag)
     {
-        cin >> input;
-        if(input.compare("exit") == 0)
+        if(count == 0)
         {
-            cout << "Exiting " << endl;
-            close(socket_id);
-            exit(1);
+            cout << "Using Deffie-Hellman for aes Key generation...\n";
+            string s2 = utils::IntegerTohexString(dff->getPrime());
+            int val = send(socket_id, s2.c_str(), s2.length(), 0 );
+            if(val  < 0)
+                cout << "Prime send error" << endl;
+            count = 1;
         }
-        else
+        else if(count == 1 && prime)
         {
-            if(count == 0)
-            {
-                string s2 = utils::IntegerTohexString(dff->getPrime());
-
-                int val = send(socket_id, s2.c_str(), s2.length(), 0 );
-                if(val  < 0)
-                    cout << "send eroor" << endl;
-                count = 1;
-            }
-            else if(count == 1)
-            {
-
-                string s2 = utils::IntegerTohexString(dff->getGenerator());
-                cout << s2 << endl;
-
-                int val = send(socket_id, s2.c_str(), s2.length(), 0 );
-                if(val  < 0)
-                    cout << "send eroor" << endl;
-                count = 2;
-            }
-            else if(count == 2)
-            {
-
-                string  s2 = utils::SecByteToString(dff->getpubKey());
-                cout << "pub : " << s2 << endl;
-                int val = send(socket_id, s2.c_str(), s2.length(), 0 );
-                if(val  < 0)
-                    cout << "send eroor" << endl;
-                count = 3;
-            }
-            else if(count == 3) {
-                
-                string output = utils::findMD5(dff->getaesKey());
-                std::cout << "hash" << output << std::endl;
-                int val = send(socket_id, output.c_str(), output.length(), 0 );
-                if(val  < 0)
-                    cout << "send eroor" << endl;
-                    count = 4;
-            }
+            string s2 = utils::IntegerTohexString(dff->getGenerator());
+            int val = send(socket_id, s2.c_str(), s2.length(), 0 );
+            if(val  < 0)
+                cout << "generator send eroor" << endl;
+            count = 2;
+        }
+        else if(count == 2 && gen)
+        {
+            string  s2 = utils::SecByteToString(dff->getpubKey());
+            int val = send(socket_id, s2.c_str(), s2.length(), 0 );
+            if(val  < 0)
+                cout << "send eroor" << endl;
+            count = 3;
+        }
+        else if(count == 3 && agreed) {
+            
+            cout << "Starting AES key conformation " <<endl;
+            string output = utils::findMD5(dff->getaesKey());
+            int val = send(socket_id, output.c_str(), output.length(), 0);
+            if(val  < 0)
+                cout << "send eroor" << endl;
+            count = 4;
+        }
+        else if(count == 4)
+        {
+            char s[] = "om and shubham";
+            int length = (int)strlen(s)+ 1;
+            utils::aesEncryption(dff->getaesShaKey(), s, length);
+            int val = send(socket_id, s, strlen(s) + 1, 0 );
+            if(val  < 0)
+                cout << "send eroor" << endl;
+            count = 5;
         }
     }
     
@@ -109,7 +123,6 @@ void writer(int socket_id)
 int main()
 {
     dff = new Deffie_Hellman;
-    cout << "OM : " << dff->getPrime() << endl;
     char buffer[1024] = {0};
     int read_val;
     flag  = 1;

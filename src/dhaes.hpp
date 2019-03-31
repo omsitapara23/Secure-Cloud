@@ -23,6 +23,7 @@ class Deffie_Hellman
         SecByteBlock pub;
         SecByteBlock aesGen;
         AutoSeededRandomPool rng;
+        SecByteBlock aesShaKey;
         DH dh;
     
     public:
@@ -48,7 +49,9 @@ class Deffie_Hellman
             {
                 return false;
             }
+            SHA256().CalculateDigest(aesShaKey, aesGen, aesGen.size());
             return true;
+
         }
 
         SecByteBlock getaesKey()
@@ -59,6 +62,11 @@ class Deffie_Hellman
         SecByteBlock getpubKey()
         {
             return pub;
+        }
+
+        SecByteBlock getaesShaKey()
+        {
+            return aesShaKey;
         }
 
 
@@ -74,6 +82,7 @@ class Deffie_Hellman
             priv = SecByteBlock(dh.PrivateKeyLength());
             pub = SecByteBlock(dh.PublicKeyLength());
             aesGen = SecByteBlock(dh.AgreedValueLength());
+            aesShaKey = SecByteBlock(SHA256::DIGESTSIZE);
             dh.GenerateKeyPair(rng, priv, pub);
         }
 
@@ -85,6 +94,7 @@ class Deffie_Hellman
             priv = SecByteBlock(dh.PrivateKeyLength());
             pub = SecByteBlock(dh.PublicKeyLength());
             aesGen = SecByteBlock(dh.AgreedValueLength());
+            aesShaKey = SecByteBlock(SHA256::DIGESTSIZE);
             dh.GenerateKeyPair(rng, priv, pub);
         }
 
