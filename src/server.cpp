@@ -11,11 +11,15 @@
 #include <atomic>
 #include "dhaes.hpp"
 #include "utils.hpp"
+#include <sys/stat.h> 
+
 using namespace std;
 
 atomic<int> total_Conn{0};
 atomic<int> port;
 mutex mtx;
+
+map<string, string> uname_pass;
 
 struct client_soc
 {
@@ -25,13 +29,55 @@ struct client_soc
     Integer generator;
     SecByteBlock pub0;
     Deffie_Hellman * dh2;
+    string dir;
     client_soc()
     {
         count = 0;
         fd = 0;
+        dir = "";
         
     }
 };
+
+void  parser_request(string request)
+{
+    string type = "";
+    int i = 0;
+    while(request[i] != '|')
+    {
+        type += request[i];
+        i++;
+    }
+    i++;
+    cout << "Request : " << type << endl;
+    if(type == "CREATE")
+    {
+        string uname = "";
+        while(request[i] != '|')
+        {
+            uname += request[i];
+            i++;
+        }
+        i++;
+        cout << "Uname : " << uname << endl;
+        string password = "";
+        while(request[i] != '|')
+        {
+            password += request[i];
+            i++;
+        }
+        cout << "pass : " << password << endl;
+        string hashuname = utils::findMD5(uname);
+        string hashpass = utils::findMD5(password);
+        uname_pass[hashuname] = hashpass;
+        string dir_make = "server_data/" + hashuname;
+        if (mkdir(dir_make.c_str(), 0777) == -1) 
+            cerr << "Error :  " << strerror(errno) << endl; 
+        else
+            cout << "Directory created";    
+
+    }
+}
 
 void client_runner_th(client_soc client)
 {
@@ -101,6 +147,8 @@ void client_runner_th(client_soc client)
             cout << "e : " << buffer << "------";
             utils::aesDecryption(client.dh2->getaesShaKey(), buffer, string_length);
             cout << "d : " << buffer << endl;
+            string request(buffer);
+            parser_request(request);
         }
     }
 

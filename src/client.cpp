@@ -128,13 +128,32 @@ void writer(int socket_id)
     
 }
 
+string create_user()
+{
+    string username;
+    cout << "Enter user name(a-z0-9A-Z) : ";
+    cin >> username;
+    string  password;
+    cout << "Enter password(a-z0-9A-Z) : ";
+    cin >> password;
+    int length = password.length();
+    while(length < 8)
+    {
+        cout << "Enter a password with length 8 or more : ";
+        cin >> password;
+        length = password.length();
+    }
+
+    string to = "CREATE|" + username + "|" + password + "|"; 
+    return to;
+}
+
 int main()
 {
     dff = new Deffie_Hellman;
     char buffer[1024] = {0};
     int read_val;
     flag  = 1;
-    string input;
     struct sockaddr_in client_address;
     struct sockaddr_in server_addr;
     int socket_id = socket(AF_INET, SOCK_STREAM, 0);
@@ -175,19 +194,25 @@ int main()
     if(connection < 0)
         printf("Connection error\n");
 
-    string iinput;
+    int input;
     while(true)
     {
         cin >> input;
-        cout << "Sending : " << input << endl;
-        int len = input.length();
-        char message[len + 1];
-        strcpy(message, input.c_str());
-        int length = (int)strlen(message)+ 1;
-        utils::aesEncryption(dff->getaesShaKey(), message, length);
-        int val = send(socket_id, message, length, 0 );
-        if(val  < 0)
-            cout << "send eroor" << endl;
+        if(input == 1)
+        {
+            string to_send = create_user();
+            cout << "Sending : " << to_send << endl;
+            int len = to_send.length();
+            char message[len + 1];
+            strcpy(message, to_send.c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(dff->getaesShaKey(), message, length);
+            int val = send(socket_id, message, length, 0 );
+            if(val  < 0)
+                cout << "send eroor" << endl;   
+
+        }
+        
 
     }
 
