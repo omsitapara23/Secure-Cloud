@@ -192,7 +192,7 @@ int main()
                 //adding to first non-empty position
                 if( client_socket[i] == 0 )  
                 {  
-                    cout << "new connection " << endl;
+                    cout << "New Client starting handshake.. " << endl;
                     client_socket[i] = new_socket;   
                     total_Conn++;  
                     isget = 1 ;
@@ -201,7 +201,7 @@ int main()
             } 
             if(isget == 0)
             {
-                string s = "buffer full";
+                string s = "server capacity reached";
                 send(new_socket, s.c_str(), s.length(), 0);
             } 
         }  
@@ -230,68 +230,72 @@ int main()
                 {  
                     if(count == 0)
                     {
+                        count = 1;
+                        cout << "Starting Deffie-Hellman for AES key generation.." << endl;
                         buffer[string_length] = '\0';
                         string l(buffer);
                         prime = utils::stringHexToInteger(l);
-                        cout << "p : " << prime << endl;
-                        count = 1;
+                        string s = "prime";
+                        int val = send(client_socket[i], s.c_str(), s.length(), 0 );
+                        if(val  < 0)
+                            cout << "send eroor" << endl;
                     }
                     else if (count == 1)
                     {
+                        count = 2;
                         buffer[string_length] = '\0';
                         generator = utils::stringHexToInteger(buffer);
-                        cout << "g : " << generator << endl;
+                        string s = "gen";
+                        int val = send(client_socket[i], s.c_str(), s.length(), 0 );
+                        if(val  < 0)
+                            cout << "send eroor" << endl;
 
-                        count = 2;
                     }
                     else if(count == 2)
                     {
+                        count = 3;
                         buffer[string_length] = '\0';
                         string lawl(buffer);
-                        cout << "pub  rec : " << lawl << endl;
                         SecByteBlock pubO = utils::stringToSecByte(lawl);
-                        cout << "herer" << endl;
                         dh2 = new Deffie_Hellman(prime, generator);
-                        cout << "herer" << endl;
 
                         bool result = dh2->AgreeFunc(pubO);
                         if(!result)
                         {
                             cout << "Agreeemnet failed " << endl;
                         }
-                        cout << "herer" << endl;
-
+                        cout << "AES key generated .. " << endl;
                         Integer a;
                         a.Decode(dh2->getaesKey().BytePtr(), dh2->getaesKey().SizeInBytes());
-                        cout << hex << a << endl;
                         SecByteBlock pub = dh2->getpubKey();
 
                         string  s2 = utils::SecByteToString(pub);
-                        cout << "sending pub : " << s2 << endl;
                         int val = send(client_socket[i], s2.c_str(), s2.length(), 0 );
                         if(val  < 0)
-                            cout << "send eroor" << endl;
-                        count = 3;
+                            cout << "pub send eroor" << endl;
                     
                     }
                     else if(count == 3) {
+                        count = 4;
+                        cout << "Starting AES key verification.." << endl;
                         buffer[string_length] = '\0';
                         string h(buffer);
                         string output = utils::findMD5(dh2->getaesKey());
-                        std::cout << "hash : " << output << std::endl;
-                        cout << "h : " << h << endl;
                         if(h == output) {
                             cout << "verified Secret Key. Starting Session..." << endl;
                         }
+                        else
+                        {
+                            cout << "Verification failed" << endl;
+                        }
+                        
                         int val = send(client_socket[i], output.c_str(), output.length(), 0 );
                         if(val  < 0)
                             cout << "send eroor" << endl;
-                        count = 4;
                     }
                     else
                     {
                         buffer[string_length] = '\0';
-                        cout << "enc : " << buffer << endl;
                         utils::aesDecryption(dh2->getaesShaKey(), buffer, 16);
                         cout << "d : " << buffer << endl;
                     }

@@ -15,7 +15,6 @@ class utils
         {
             Integer a;
             a.Decode(block.BytePtr(), block.SizeInBytes());
-            cout << " conv : " << a << endl;
             return IntegerTohexString(a);
         }
 
