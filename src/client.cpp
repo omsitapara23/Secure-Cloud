@@ -18,6 +18,15 @@ bool agreed = false;
 bool prime = false;
 bool gen = false;
 int tcp_port;
+
+inline bool file_exist(const std::string& name)
+{
+    ifstream file(name);
+    if(!file)            // If the file was not found, then file is 0, i.e. !file=1 or true.
+        return false;    // The file was not found.
+    else                 // If the file was found, then file is non-0.
+        return true;     // The file was found.
+}
 void reader(int socket_id)
 {
     char buffer[4096];
@@ -163,6 +172,13 @@ string user_upload() {
     cin >> file_path;
     return file_path;
 }
+
+string user_delete() {
+    string file_path;
+    cout << "Enter the filename on server to delete from server: ";
+    cin >> file_path;
+    return file_path;
+}
 int main()
 {
     dff = new Deffie_Hellman;
@@ -249,7 +265,18 @@ int main()
             cout << recv_msg << endl;
         }
         if(input == 3) {
-            string file_to_upload = user_upload();
+            bool exist = false;
+            string file_to_upload; 
+            while(!exist)
+            {
+                file_to_upload = user_upload();
+                exist = file_exist(file_to_upload);
+                if(!exist)
+                {
+                    cout << "Enter a valid file path" << endl;
+                }
+
+            }
             string file_name;
             bool loc_flag = false;
             // Finding the file name from the file path
@@ -303,8 +330,36 @@ int main()
                         curPoint = fs;
                     }
                 }
+                byteRec = recv(socket_id1, buffer, 10000, 0);
+                recv_msg = string(buffer);
+                cout << "enc : " << recv_msg << endl;
+                utils::aesDecryption(dff->getaesShaKey(), buffer, byteRec);
+                recv_msg = string(buffer);
+                cout << recv_msg << endl;
                 in.close();
+
             }
+        }
+        if(input == 5)
+        {
+            string file_to_delete = user_delete();
+            string to = "DELETE|" + file_to_delete + "|";
+            cout << "Sending : " << to << endl;
+            int len = to.length();
+            char message[len + 1];
+            strcpy(message, to.c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(dff->getaesShaKey(), message, length);
+            int val = send(socket_id1, message, length, 0 );
+            if(val  < 0)
+                cout << "send eroor" << endl;   
+            int byteRec = recv(socket_id1, buffer, 10000, 0);
+            string recv_msg(buffer);
+            cout << "enc : " << recv_msg << endl;
+            utils::aesDecryption(dff->getaesShaKey(), buffer, byteRec);
+            recv_msg = string(buffer);
+            cout << recv_msg << endl;
+
         }
         if (input == -1)
         {

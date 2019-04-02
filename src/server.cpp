@@ -23,6 +23,15 @@ fstream shaf;
 map<string, string> uname_pass;                // mapping of user name to MD5 hash of its password
 map<string, long long> uname_mem;              // mapping of user name to memory consumed
 map<string, string> fname_shasum;              // mapping of file path to its SHA256 digest
+
+inline bool file_exist(const std::string& name)
+{
+    ifstream file(name);
+    if(!file)            // If the file was not found, then file is 0, i.e. !file=1 or true.
+        return false;    // The file was not found.
+    else                 // If the file was found, then file is non-0.
+        return true;     // The file was found.
+}
 struct client_soc
 {
     int fd;
@@ -174,6 +183,7 @@ void parser_request(string request, int client_socket, client_soc * client)
             int length = (int)strlen(message)+ 1;
             utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
             int val = send(client_socket, message, length, 0 );
+            client->hashuname = hashuname;
             client->logged_in = true;
             client->dir = "server_data/" + hashuname;
             client->total_mem_consumed = uname_mem[client->hashuname];
@@ -260,8 +270,52 @@ void parser_request(string request, int client_socket, client_soc * client)
         of << client->hashuname << endl;
         of << client->total_mem_consumed << endl;
         out.close();
-        cout << "exiting" << endl;
+        cout << "File successfully uploaded.." << endl;
+        string err = "File successfully uploaded.";
+        len = err.length();
+        message[len + 1];
+        strcpy(message, err.c_str());
+        length = (int)strlen(message)+ 1;
+        utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+        val = send(client_socket, message, length, 0 );
         return;
+    }
+    else if(type == "DELETE")
+    {
+        string file_to_delete = "";
+        while(request[i] != '|')
+        {
+            file_to_delete += request[i];
+            i++;
+        }
+        string path = client->dir + "/" + file_to_delete;
+        cout << "Path : " << path << endl;
+        if(!file_exist(path))
+        {
+            cout << "File does not exist on server" << endl;
+            string err = "File does not exist on server" ;
+            int len = err.length();
+            char message[len + 1];
+            strcpy(message, err.c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+            int val = send(client_socket, message, length, 0 );
+            return;
+        }
+        else
+        {
+            string command = "rm " + path;
+            system(command.c_str());
+            cout << "File Deleted" << endl;
+            string err = "File Deleted" ;
+            int len = err.length();
+            char message[len + 1];
+            strcpy(message, err.c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+            int val = send(client_socket, message, length, 0 );
+            return;
+        }
     }
 }
 
