@@ -70,14 +70,18 @@ void parser_request(string request, int client_socket, client_soc * client)
         cout << "pass : " << password << endl;
         string hashuname = utils::findMD5(uname);
         string hashpass = utils::findMD5(password);
-        uname_pass[hashuname] = hashpass;
-        f << hashuname << endl;
-        f << hashpass << endl;
+        
+
         string dir_make = "server_data/" + hashuname;
         if (mkdir(dir_make.c_str(), 0777) == -1) 
-            cerr << "Error :  " << strerror(errno) << endl; 
+            cerr << "Error :  " << " user already exists" << endl; 
         else
+        {
             cout << "Directory created";    
+            uname_pass[hashuname] = hashpass;
+            f << hashuname << endl;
+            f << hashpass << endl;
+        }
 
     }
     else if(type == "LOGIN") {
@@ -173,17 +177,19 @@ void client_runner_th(client_soc client)
         perror("accept"); 
         exit(EXIT_FAILURE); 
     }   
-
-    while(true)
+    bool flag = 1;
+    while(flag)
     {
         //checking if some one disconnected
-        if ((string_length = read( client_socket, buffer, 4096)) == 0)  
+        if ((string_length = read( client_socket, buffer, 4096)) <= 0)  
         { 
             cout << "Client disconnected " << endl;
             close(client_socket);  
+            flag = 0;
         }  
         else
         {
+            cout << "rec : " << string_length << endl;
             buffer[string_length] = '\0';
             cout << "e : " << buffer << "------";
             utils::aesDecryption(client.dh2->getaesShaKey(), buffer, string_length);
@@ -254,7 +260,7 @@ int main()
     //data structure for the server
     sever_address.sin_family = AF_INET;  
     sever_address.sin_addr.s_addr = INADDR_ANY;  
-    sever_address.sin_port = htons( 3542 );  
+    sever_address.sin_port = htons( 3425 );  
 
     //binding the server to listen to respective port
     if (bind(server_socket, (struct sockaddr *)&sever_address, sizeof(sever_address))<0)  
@@ -263,6 +269,7 @@ int main()
         exit(EXIT_FAILURE);  
     }  
 
+    cout << "here" << endl;
     //lsiten to that socket and 5 is the waiting queue of clients
     if (listen(server_socket, n + 1) < 0)  
     {  
@@ -272,6 +279,7 @@ int main()
 
     sever_address_length = sizeof(sever_address); 
     int flag = 1;
+    total_Conn = 10;
     //run server loop
     while(total_Conn || flag )  
     {  
@@ -352,14 +360,10 @@ int main()
             if (FD_ISSET( curr_soc , &scoket_descriptor))  
             { 
                 //checking if some one disconnected
-                if ((string_length = read( curr_soc , buffer, 4096)) == 0)  
+                if (client_socket[i].count != -1 && (string_length = read( curr_soc , buffer, 4096)) == 0)  
                 {  
-
-                    getpeername(curr_soc , (struct sockaddr*)&sever_address ,(socklen_t*)&sever_address_length);  
-                    close(curr_soc);  
-                    client_socket[i].fd = 0; 
-                    cout << "Client : " << i << "disconnected " << endl;
-                    total_Conn--;
+                    cout << "Client " << i << " switching to new connection " << endl;
+                    client_socket[i].count = -1;
                 }  
                     
                 //receviving the message came in
@@ -430,7 +434,7 @@ int main()
                         if(val  < 0)
                             cout << "send eroor" << endl;
                     }
-                    else
+                    else if(client_socket[i].count == 4)
                     {
                         buffer[string_length] = '\0';
                         utils::aesDecryption(client_socket[i].dh2->getaesShaKey(), buffer, string_length);

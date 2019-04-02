@@ -159,11 +159,11 @@ string user_login() {
 int main()
 {
     dff = new Deffie_Hellman;
-    char buffer[1024] = {0};
+    char buffer[4096] = {0};
     int read_val;
     flag  = 1;
-    struct sockaddr_in client_address;
-    struct sockaddr_in server_addr;
+    struct sockaddr_in client_address, client_address1;
+    struct sockaddr_in server_addr, server_addr1;
     int socket_id = socket(AF_INET, SOCK_STREAM, 0);
     if(socket_id  == 0)
     {
@@ -174,31 +174,31 @@ int main()
     if(result < 0)
         printf("error for inet_pton");
     server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(3542);
+    server_addr.sin_port = htons(3425);
 
     int connection = connect(socket_id, (struct sockaddr *)&server_addr, sizeof(server_addr));
     if(connection < 0)
-        printf("Connection error\n");
+        printf("Connection error aa\n");
 
     thread readerth(reader, socket_id);
     thread writerth(writer, socket_id);
-
+    
     readerth.join();
     writerth.join();
-
-    socket_id = socket(AF_INET, SOCK_STREAM, 0);
-    if(socket_id  == 0)
+    close(socket_id);
+    int socket_id1 = socket(AF_INET, SOCK_STREAM, 0);
+    if(socket_id1  == 0)
     {
         printf("Socket Error\n");
     }
 
-    result = inet_pton(AF_INET, "127.0.0.1", &server_addr.sin_addr);
+    result = inet_pton(AF_INET, "127.0.0.1", &server_addr1.sin_addr);
     if(result < 0)
         printf("error for inet_pton");
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(tcp_port);
+    server_addr1.sin_family = AF_INET;
+    server_addr1.sin_port = htons(tcp_port);
 
-    connection = connect(socket_id, (struct sockaddr *)&server_addr, sizeof(server_addr));
+    connection = connect(socket_id1, (struct sockaddr *)&server_addr1, sizeof(server_addr1));
     if(connection < 0)
         printf("Connection error\n");
 
@@ -215,13 +215,13 @@ int main()
             strcpy(message, to_send.c_str());
             int length = (int)strlen(message)+ 1;
             utils::aesEncryption(dff->getaesShaKey(), message, length);
-            int val = send(socket_id, message, length, 0 );
+            int val = send(socket_id1, message, length, 0 );
             if(val  < 0)
                 cout << "send eroor" << endl;   
 
         }
         if(input == 2) {
-            char buffer[1000] = {0};
+            char buffer[4096] = {0};
             string to_send = user_login();
             cout << "Sending : " << to_send << endl;
             int len = to_send.length();
@@ -229,12 +229,17 @@ int main()
             strcpy(message, to_send.c_str());
             int length = (int)strlen(message)+ 1;
             utils::aesEncryption(dff->getaesShaKey(), message, length);
-            int val = send(socket_id, message, length, 0 );
+            int val = send(socket_id1, message, length, 0 );
             if(val  < 0)
                 cout << "send eroor" << endl;   
-            recv(socket_id, buffer, 1000, 0);
+            recv(socket_id1, buffer, 4096, 0);
             string recv_msg(buffer);
             cout << recv_msg << endl;
+        }
+        if (input == -1)
+        {
+            close(socket_id1);
+            return 100;
         }
 
     }
