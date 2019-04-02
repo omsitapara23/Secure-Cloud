@@ -84,10 +84,28 @@ void parser_request(string request, int client_socket, client_soc * client)
         string hashpass = utils::findMD5(password);
         string dir_make = "server_data/" + hashuname;
         if (mkdir(dir_make.c_str(), 0777) == -1) 
+        {
             cerr << "Error :  " << " user already exists" << endl; 
+            string err = "Error : user already exists";
+            int len = err.length();
+            char message[len + 1];
+            strcpy(message, err.c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+            int val = send(client_socket, message, length, 0 );
+            return;
+        }
         else
         {
             cout << "Directory created";    
+            string err = "User Created";
+            int len = err.length();
+            char message[len + 1];
+            strcpy(message, err.c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+            int val = send(client_socket, message, length, 0 );
+            return;
             uname_pass[hashuname] = hashpass;
             f << hashuname << endl;
             f << hashpass << endl;

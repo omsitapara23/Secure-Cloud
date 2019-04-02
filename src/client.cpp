@@ -224,7 +224,11 @@ int main()
             utils::aesEncryption(dff->getaesShaKey(), message, length);
             int val = send(socket_id1, message, length, 0 );
             if(val  < 0)
-                cout << "send eroor" << endl;   
+                cout << "send eroor" << endl; 
+            int byteRec = recv(socket_id1, buffer, 4096, 0);
+            utils::aesDecryption(dff->getaesShaKey(), buffer, byteRec);
+            string recv_msg(buffer);
+            cout << recv_msg << endl;  
 
         }
         if(input == 2) {
