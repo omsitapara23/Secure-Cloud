@@ -12,15 +12,17 @@
 #include "dhaes.hpp"
 #include "utils.hpp"
 #include <sys/stat.h> 
-
 using namespace std;
-
+long long MAXMEMORY = 1000000;
 atomic<int> total_Conn{0};
 atomic<int> port;
 mutex mtx;
 fstream f;
-map<string, string> uname_pass;
-
+fstream of;
+fstream shaf;
+map<string, string> uname_pass;                // mapping of user name to MD5 hash of its password
+map<string, long long> uname_mem;              // mapping of user name to memory consumed
+map<string, string> fname_shasum;              // mapping of file path to its SHA256 digest
 struct client_soc
 {
     int fd;
@@ -31,15 +33,25 @@ struct client_soc
     Deffie_Hellman * dh2;
     string dir;
     bool logged_in;
+    long long total_mem_consumed;
+    string hashuname;
     client_soc()
     {
         count = 0;
         fd = 0;
         dir = "";
         logged_in = false;
+        total_mem_consumed = 0;
     }
 };
-
+inline bool exist(const std::string& name)
+{
+    ifstream file(name);
+    if(!file)            
+        return false;    
+    else                 
+        return true;     
+}
 void parser_request(string request, int client_socket, client_soc * client)
 {
     string type = "";
@@ -70,8 +82,6 @@ void parser_request(string request, int client_socket, client_soc * client)
         cout << "pass : " << password << endl;
         string hashuname = utils::findMD5(uname);
         string hashpass = utils::findMD5(password);
-        
-
         string dir_make = "server_data/" + hashuname;
         if (mkdir(dir_make.c_str(), 0777) == -1) 
             cerr << "Error :  " << " user already exists" << endl; 
@@ -81,10 +91,23 @@ void parser_request(string request, int client_socket, client_soc * client)
             uname_pass[hashuname] = hashpass;
             f << hashuname << endl;
             f << hashpass << endl;
+            of << hashuname << endl;
+            of << client->total_mem_consumed << endl;
+            client->hashuname = hashuname;
+            uname_mem[client->hashuname] = 0;
         }
-
     }
     else if(type == "LOGIN") {
+        if(client->logged_in == true) {
+            string err = "LOGIN Error : You are already logged in. Please LOGOUT before logging in to a different account.";
+            int len = err.length();
+            char message[len + 1];
+            strcpy(message, err.c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+            int val = send(client_socket, message, length, 0 );
+            return;
+        }
         string uname = "";
         while(request[i] != '|')
         {
@@ -104,23 +127,123 @@ void parser_request(string request, int client_socket, client_soc * client)
         if(uname_pass.find(hashuname) == uname_pass.end()) {
             string err = "LOGIN Failed : Error : User " + uname + " does not exist.";
             cout << err << endl;
-            send(client_socket, err.c_str(), err.length(), 0);
+            int len = err.length();
+            char message[len + 1];
+            strcpy(message, err.c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+            int val = send(client_socket, message, length, 0 );
             client->logged_in = false;
             return;
         }
         if(uname_pass[hashuname] != hashpass) {
             string err = "LOGIN Failed : Error : wrong password for User : " + uname;
             cout << err << endl;
-            send(client_socket, err.c_str(), err.length(), 0);
+            int len = err.length();
+            char message[len + 1];
+            strcpy(message, err.c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+            int val = send(client_socket, message, length, 0 );
             client->logged_in = false;
             return;
         } else {
             string str = "LOGIN Successful : Further requests can be served.";
             cout << str << endl;
-            send(client_socket, str.c_str(), str.length(), 0);
+            int len = str.length();
+            char message[len + 1];
+            strcpy(message, str.c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+            int val = send(client_socket, message, length, 0 );
             client->logged_in = true;
+            client->dir = "server_data/" + hashuname;
+            client->total_mem_consumed = uname_mem[client->hashuname];
             return;
         }
+    }
+    else if(type == "UPLOAD") {
+        if(client->logged_in == false) {
+            string err = "LOGIN Error : You need to be logged in to UPLOAD a file. Please LOGIN with your account or CREATE an account if you dont have one.";
+            int len = err.length();
+            char message[len + 1];
+            strcpy(message, err.c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+            int val = send(client_socket, message, length, 0 );
+            return;
+        }
+        char buffer[10000] = {0};
+        string file_name = "";
+        while(request[i] != '|')
+        {
+            file_name += request[i];
+            i++;
+        }
+        i++;
+        cout << "file name : " << file_name << endl;
+        string file_size = "";
+        while(request[i] != '|')
+        {
+            file_size += request[i];
+            i++;
+        }
+        long long file_s;
+        file_s = stoll(file_size);
+        string hashfilename = utils::findMD5(file_name);
+        if(client->total_mem_consumed + file_s > MAXMEMORY) {
+            string err = "UPLOAD Error : Insufficient space, please delete a file or upload a smaller file. Available Memory " + to_string(MAXMEMORY - client->total_mem_consumed) + " request UPLOAD has size " + to_string(file_s);
+            int len = err.length();
+            char message[len + 1];
+            strcpy(message, err.c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+            int val = send(client_socket, message, length, 0 );
+            return;
+        }
+        cout << client->dir << endl;
+        string file_path_out = client->dir + "/" + file_name;
+        if(exist(file_path_out) == true) {
+            cout << "already exist" << endl;
+            string err = "UPLOAD Error : file " + file_name +" already exists.";
+            int len = err.length();
+            char message[len + 1];
+            strcpy(message, err.c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+            int val = send(client_socket, message, length, 0 );
+            cout << "exiting ex" << endl;
+            return;
+        }
+        string s = "UPLOAD OK";
+        int len = s.length();
+        char message[len + 1];
+        strcpy(message, s.c_str());
+        int length = (int)strlen(message)+ 1;
+        utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+        int val = send(client_socket, message, length, 0 );
+        fstream out;
+        out.open(file_path_out, ios::binary | ios::out);
+        long long numBytes = 0;
+        int byteRecieved;
+        while(numBytes < file_s) {
+            memset(buffer, 0, sizeof(buffer));
+            byteRecieved = recv(client_socket, buffer, sizeof(buffer), 0);
+            cout << byteRecieved << endl;
+            numBytes += byteRecieved;
+            utils::aesDecryption(client->dh2->getaesShaKey(), buffer, byteRecieved);
+            for (int i = 0; i < byteRecieved; i++)
+            {
+                out << buffer[i];
+            }
+        }
+        client->total_mem_consumed += file_s;
+        uname_mem[client->hashuname] += file_s;
+        of << client->hashuname << endl;
+        of << client->total_mem_consumed << endl;
+        out.close();
+        cout << "exiting" << endl;
+        return;
     }
 }
 
@@ -201,10 +324,6 @@ void client_runner_th(client_soc client)
 
 
 }
-
-
-
-
 int main()
 {
     port = 4000;
@@ -228,7 +347,24 @@ int main()
         uname_pass[u] = p;
     }
     f.close();
+    long long allcMem;
+    of.open("server_data/uname_mem.txt", ios::in);
+    while(!of.eof()) {
+        of >> u;
+        of >> allcMem;
+        uname_mem[u] = allcMem;
+    }
+    of.close();
+    shaf.open("server_data/fname_shasum.txt", ios::in);
+    while(!shaf.eof()) {
+        shaf >> u;
+        shaf >> p;
+        fname_shasum[u] = p;
+    }
+    shaf.close();
     f.open("server_data/uname_pass.txt", ios::out | ios::app);
+    of.open("server_data/uname_mem.txt", ios::out | ios::app);
+    shaf.open("server_data/fname_shasum.txt", ios::out | ios::app);
     struct sockaddr_in sever_address;
     char buffer[4096];
 
