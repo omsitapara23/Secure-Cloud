@@ -53,16 +53,9 @@ struct client_soc
         total_mem_consumed = 0;
     }
 };
-inline bool exist(const std::string& name)
-{
-    ifstream file(name);
-    if(!file)            
-        return false;    
-    else                 
-        return true;     
-}
 void parser_request(string request, int client_socket, client_soc * client)
 {
+    char buffer[10000] = {0};
     string type = "";
     int i = 0;
     while(request[i] != '|')
@@ -114,7 +107,6 @@ void parser_request(string request, int client_socket, client_soc * client)
             int length = (int)strlen(message)+ 1;
             utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
             int val = send(client_socket, message, length, 0 );
-            return;
             uname_pass[hashuname] = hashpass;
             f << hashuname << endl;
             f << hashpass << endl;
@@ -122,6 +114,7 @@ void parser_request(string request, int client_socket, client_soc * client)
             of << client->total_mem_consumed << endl;
             client->hashuname = hashuname;
             uname_mem[client->hashuname] = 0;
+            return;
         }
     }
     else if(type == "LOGIN") {
@@ -201,7 +194,6 @@ void parser_request(string request, int client_socket, client_soc * client)
             int val = send(client_socket, message, length, 0 );
             return;
         }
-        char buffer[10000] = {0};
         string file_name = "";
         while(request[i] != '|')
         {
@@ -231,7 +223,7 @@ void parser_request(string request, int client_socket, client_soc * client)
         }
         cout << client->dir << endl;
         string file_path_out = client->dir + "/" + file_name;
-        if(exist(file_path_out) == true) {
+        if(file_exist(file_path_out) == true) {
             cout << "already exist" << endl;
             string err = "UPLOAD Error : file " + file_name +" already exists.";
             int len = err.length();
@@ -255,11 +247,12 @@ void parser_request(string request, int client_socket, client_soc * client)
         long long numBytes = 0;
         int byteRecieved;
         while(numBytes < file_s) {
-            memset(buffer, 0, sizeof(buffer));
+            memset(buffer, 0, 10000);
             byteRecieved = recv(client_socket, buffer, sizeof(buffer), 0);
-            cout << byteRecieved << endl;
-            numBytes += byteRecieved;
+            cout << "rec: " << byteRecieved << endl;
             utils::aesDecryption(client->dh2->getaesShaKey(), buffer, byteRecieved);
+            numBytes += byteRecieved;
+            cout << "numBytes: " << numBytes << endl;
             for (int i = 0; i < byteRecieved; i++)
             {
                 out << buffer[i];
@@ -279,6 +272,84 @@ void parser_request(string request, int client_socket, client_soc * client)
         utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
         val = send(client_socket, message, length, 0 );
         return;
+    }
+    else if(type == "DOWNLOAD")
+    {
+        if(client->logged_in == false) {
+            string err = "LOGIN Error : You need to be logged in to UPLOAD a file. Please LOGIN with your account or CREATE an account if you dont have one.";
+            int len = err.length();
+            char message[len + 1];
+            strcpy(message, err.c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+            int val = send(client_socket, message, length, 0 );
+            return;
+        }
+        string file_name = "";
+        while(request[i] != '|')
+        {
+            file_name += request[i];
+            i++;
+        }
+        i++;
+        cout << "file name : " << file_name << endl;
+        string path = client->dir + "/" + file_name;
+        if(file_exist(path) == false)
+        {
+            string err = "Download Error: File does not exist on server";
+            int len = err.length();
+            char message[len + 1];
+            strcpy(message, err.c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+            int val = send(client_socket, message, length, 0 );
+            return;
+        }
+        else
+        {
+            string err = "DOWNLOAD OK";
+            int len = err.length();
+            char message[len + 1];
+            strcpy(message, err.c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+            int val = send(client_socket, message, length, 0 );
+            fstream in;
+            in.open(path, ios::binary|ios::in);
+            struct stat FS;
+            int rc = stat(path.c_str(), &FS);
+            long long fs;
+            fs = FS.st_size;
+            string size = to_string(fs);
+            len = size.length();
+            char message1[len + 1];
+            strcpy(message1, size.c_str());
+            length = (int)strlen(message1)+ 1;
+            utils::aesEncryption(client->dh2->getaesShaKey(), message1, length);
+            val = send(client_socket, message1, length, 0 );
+            int curPoint = 0;
+            while(!in.eof()) {
+                bzero(buffer, sizeof(buffer));
+                in.read(buffer, 10000);
+                curPoint += 10000;
+                if(curPoint < fs) {
+                    int length = (int)strlen(buffer)+ 1;
+                    utils::aesEncryption(client->dh2->getaesShaKey(), buffer, 10000);
+                    int s = send(client_socket, buffer, 10000, 0);
+                    cout << "sent : " << 10000 << endl;
+                } else {
+                    int length = (int)strlen(buffer)+ 1;
+                    utils::aesEncryption(client->dh2->getaesShaKey(), buffer, fs + 10000 - curPoint);
+                    int s = send(client_socket, buffer, fs + 10000 - curPoint, 0);
+                    cout << "sent : " << fs + 10000 - curPoint << endl;
+                    curPoint = fs;
+                }
+            }
+
+
+            in.close();
+
+        }
     }
     else if(type == "DELETE")
     {

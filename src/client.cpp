@@ -173,6 +173,13 @@ string user_upload() {
     return file_path;
 }
 
+string user_download() {
+    string file_path;
+    cout << "Enter the filename on server to download from server: ";
+    cin >> file_path;
+    return file_path;
+}
+
 string user_delete() {
     string file_path;
     cout << "Enter the filename on server to delete from server: ";
@@ -182,7 +189,7 @@ string user_delete() {
 int main()
 {
     dff = new Deffie_Hellman;
-    char buffer[4096] = {0};
+    char buffer[10000] = {0};
     int read_val;
     flag  = 1;
     struct sockaddr_in client_address, client_address1;
@@ -288,7 +295,6 @@ int main()
             }
             if(loc_flag == false)
                 file_name = file_to_upload;
-            char buffer[10000] = {0};
             struct stat FS;
             int rc = stat(file_to_upload.c_str(), &FS); 
             long long fs;
@@ -304,6 +310,7 @@ int main()
             if(val  < 0)
                 cout << "send eroor" << endl;   
             int byteRec = recv(socket_id1, buffer, 10000, 0);
+            buffer[byteRec] = '\0';
             string recv_msg(buffer);
             cout << "enc : " << recv_msg << endl;
             utils::aesDecryption(dff->getaesShaKey(), buffer, byteRec);
@@ -314,23 +321,26 @@ int main()
                 in.open(file_to_upload, ios::binary | ios::in);
                 int curPoint = 0;                
                 while(!in.eof()) {
-                    bzero(buffer, sizeof(buffer));
+                    bzero(buffer,10000);
                     in.read(buffer, 10000);
                     curPoint += 10000;
+                    string reaa(buffer);
+                    cout << reaa << endl;
                     if(curPoint < fs) {
                         int length = (int)strlen(buffer)+ 1;
-                        utils::aesEncryption(dff->getaesShaKey(), buffer, length);
+                        utils::aesEncryption(dff->getaesShaKey(), buffer, 10000);
                         int s = send(socket_id1, buffer, 10000, 0);
-                        cout << "sent : " << 10000 << endl;
+                        cout << "sent : " << length << endl;
                     } else {
                         int length = (int)strlen(buffer)+ 1;
-                        utils::aesEncryption(dff->getaesShaKey(), buffer, length);
+                        utils::aesEncryption(dff->getaesShaKey(), buffer, fs + 10000 - curPoint);
                         int s = send(socket_id1, buffer, fs + 10000 - curPoint, 0);
                         cout << "sent : " << fs + 10000 - curPoint << endl;
                         curPoint = fs;
                     }
                 }
                 byteRec = recv(socket_id1, buffer, 10000, 0);
+                buffer[byteRec] = '\0';
                 recv_msg = string(buffer);
                 cout << "enc : " << recv_msg << endl;
                 utils::aesDecryption(dff->getaesShaKey(), buffer, byteRec);
@@ -339,6 +349,57 @@ int main()
                 in.close();
 
             }
+        }
+        if(input == 4)
+        {
+            string file_to_downlolad = user_download();
+            string to = "DOWNLOAD|" + file_to_downlolad + "|";
+            cout << "Sending : " << to << endl;
+            int len = to.length();
+            char message[len + 1];
+            strcpy(message, to.c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(dff->getaesShaKey(), message, length);
+            int val = send(socket_id1, message, length, 0 );
+            if(val  < 0)
+                cout << "send eroor" << endl;   
+            int byteRec = recv(socket_id1, buffer, 10000, 0);
+            buffer[byteRec] = '\0';
+            string recv_msg(buffer);
+            cout << "enc : " << recv_msg << endl;
+            utils::aesDecryption(dff->getaesShaKey(), buffer, byteRec);
+            recv_msg = string(buffer);
+            cout << recv_msg << endl;
+            if(recv_msg == "DOWNLOAD OK")
+            {
+                byteRec = recv(socket_id1, buffer, 10000, 0);
+                buffer[byteRec] = '\0';
+                recv_msg = string(buffer);
+                cout << "enc : " << recv_msg << endl;
+                utils::aesDecryption(dff->getaesShaKey(), buffer, byteRec);
+                recv_msg = string(buffer);
+                cout <<  "sizxe : " << recv_msg << endl;
+                long long file_s = stoll(recv_msg);
+                fstream out;
+                out.open(file_to_downlolad, ios::binary | ios::out);
+                long long numBytes = 0;
+                int byteRecieved;
+                while(numBytes < file_s) {
+                    memset(buffer, 0, sizeof(buffer));
+                    byteRecieved = recv(socket_id1, buffer, sizeof(buffer), 0);
+                    cout << byteRecieved << endl;
+                    numBytes += byteRecieved;
+                    utils::aesDecryption(dff->getaesShaKey(), buffer, byteRecieved);
+                    for (int i = 0; i < byteRecieved; i++)
+                    {
+                        out << buffer[i];
+                    }   
+                }
+
+                cout << "Download complete.." << endl;
+
+            }
+            
         }
         if(input == 5)
         {
@@ -354,6 +415,7 @@ int main()
             if(val  < 0)
                 cout << "send eroor" << endl;   
             int byteRec = recv(socket_id1, buffer, 10000, 0);
+            buffer[byteRec] = '\0';
             string recv_msg(buffer);
             cout << "enc : " << recv_msg << endl;
             utils::aesDecryption(dff->getaesShaKey(), buffer, byteRec);
