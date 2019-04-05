@@ -300,6 +300,7 @@ int main()
                 if(file_to_upload[i] == '/') {
                     file_name = file_to_upload.substr(i+1, file_to_upload.length() - i);
                     loc_flag = true;
+                    break;
                 }
             }
             if(loc_flag == false)

@@ -227,19 +227,49 @@ void parser_request(string request, int client_socket, client_soc * client)
             return;
         }
         cout << client->dir << endl;
-        string file_path_out = client->dir + "/" + file_name;
-        if(file_exist(file_path_out) == true) {
-            cout << "already exist" << endl;
-            string err = "UPLOAD Error : file " + file_name +" already exists.";
-            int len = err.length();
-            char message[len + 1];
-            strcpy(message, err.c_str());
-            int length = (int)strlen(message)+ 1;
-            utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
-            int val = send(client_socket, message, length, 0 );
-            cout << "exiting ex" << endl;
-            return;
+        string path;
+        bool exists = false;
+        for(int j = 0; j < uname_folder_own[client->hashuname].size(); j++)
+        {
+            path = uname_folder_own[client->hashuname][j] + "/" + file_name;
+            exists = file_exist(path);
+            if(exists)
+            {
+                cout << "exists true";
+                break;
+            }
         }
+        if(!exists)
+        {
+            for(int j = 0; j < uname_folder_shared[client->hashuname].size(); j++)
+            {
+                path = uname_folder_shared[client->hashuname][j] + "/" + file_name;
+                exists = file_exist(path); 
+                    if(exists)
+                    {
+                        cout << "exists true";
+                        break;
+                    }
+            }
+        }
+        cout << "file name : " << file_name << endl;
+        cout << "path : " << path << endl;
+        if(exists == false) 
+        {
+            path = client->dir + "/" + file_name;
+        }
+        // if(file_exist(file_path_out) == true) {
+        //     cout << "already exist" << endl;
+        //     string err = "UPLOAD Error : file " + file_name +" already exists.";
+        //     int len = err.length();
+        //     char message[len + 1];
+        //     strcpy(message, err.c_str());
+        //     int length = (int)strlen(message)+ 1;
+        //     utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+        //     int val = send(client_socket, message, length, 0 );
+        //     cout << "exiting ex" << endl;
+        //     return;
+        // }
         string s = "UPLOAD OK";
         int len = s.length();
         char message[len + 1];
@@ -248,7 +278,7 @@ void parser_request(string request, int client_socket, client_soc * client)
         utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
         int val = send(client_socket, message, length, 0 );
         fstream out;
-        out.open(file_path_out, ios::binary | ios::out);
+        out.open(path, ios::binary | ios::out);
         long long numBytes = 0;
         int byteRecieved;
         while(numBytes < file_s) {
