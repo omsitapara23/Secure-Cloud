@@ -475,6 +475,10 @@ int main()
             string msg(buffer);
             cout << msg << endl;
         }
+        if(input == 8)
+        {
+            
+        }
         if (input == -1)
         {
             close(socket_id1);
