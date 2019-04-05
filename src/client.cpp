@@ -423,6 +423,58 @@ int main()
             cout << recv_msg << endl;
 
         }
+        if(input == 6) {
+            char buffer1[10000] = {0};
+            string to = "LS|";
+            int len = to.length();
+            char message[len + 1];
+            strcpy(message, to.c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(dff->getaesShaKey(), message, length);
+            int val = send(socket_id1, message, length, 0 );
+            if(val  < 0)
+                cout << "send eroor" << endl;
+            int l = recv(socket_id1, buffer1, 10000, 0);
+            utils::aesDecryption(dff->getaesShaKey(), buffer1, l);
+            string msg(buffer1);
+            cout << msg << endl;
+            if(msg == "LS OK") {
+                int byteRec1 = recv(socket_id1, buffer1, 10000, 0);
+                utils::aesDecryption(dff->getaesShaKey(), buffer1, byteRec1);
+                string file_num(buffer1);
+                cout << file_num << endl;
+                int fn = stoi(file_num);
+                cout << fn << endl;
+                int count = 0;
+                while(count <= fn){
+                    bzero(buffer1, 10000);
+                    int byteRec = recv(socket_id1, buffer1, 10000, 0);
+                    if(count == fn) {
+                        count++;
+                        continue;
+                    }
+                    utils::aesDecryption(dff->getaesShaKey(), buffer1, byteRec);
+                    string recv_msg(buffer1);
+                    cout << recv_msg << endl;
+                    count++;
+                }
+            }
+        }
+        if(input == 7) {
+            string to = "DELETEUSER|";
+            int len = to.length();
+            char message[len + 1];
+            strcpy(message, to.c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(dff->getaesShaKey(), message, length);
+            int val = send(socket_id1, message, length, 0 );
+            if(val  < 0)
+                cout << "send eroor" << endl;
+            int byteRec1 = recv(socket_id1, buffer, 10000, 0);
+            utils::aesDecryption(dff->getaesShaKey(), buffer, byteRec1);
+            string msg(buffer);
+            cout << msg << endl;
+        }
         if (input == -1)
         {
             close(socket_id1);
