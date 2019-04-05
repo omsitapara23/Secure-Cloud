@@ -398,9 +398,20 @@ void parser_request(string request, int client_socket, client_soc * client)
             file_to_delete += request[i];
             i++;
         }
-        string path = client->dir + "/" + file_to_delete;
+        string path;
+        bool exists = false;
+        for(int j = 0; j < uname_folder_own[client->hashuname].size(); j++)
+        {
+            path = uname_folder_own[client->hashuname][j] + "/" + file_to_delete;
+            exists = file_exist(path);
+            if(exists)
+            {
+                cout << "exists true";
+                break;
+            }
+        }
         cout << "Path : " << path << endl;
-        if(!file_exist(path))
+        if(!exists)
         {
             cout << "File does not exist on server" << endl;
             string err = "File does not exist on server" ;
