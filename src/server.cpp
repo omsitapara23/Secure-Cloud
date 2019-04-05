@@ -345,14 +345,22 @@ void parser_request(string request, int client_socket, client_soc * client)
                     curPoint = fs;
                 }
             }
-
-
             in.close();
 
         }
     }
     else if(type == "DELETE")
     {
+        if(client->logged_in == false) {
+            string err = "LOGIN Error : You need to be logged in to DELETE a file. Please LOGIN with your account or CREATE an account if you dont have one.";
+            int len = err.length();
+            char message[len + 1];
+            strcpy(message, err.c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+            int val = send(client_socket, message, length, 0 );
+            return;
+        }
         string file_to_delete = "";
         while(request[i] != '|')
         {
@@ -387,6 +395,85 @@ void parser_request(string request, int client_socket, client_soc * client)
             int val = send(client_socket, message, length, 0 );
             return;
         }
+    }
+    else if(type == "LS") {
+        if(client->logged_in == false) {
+            string err = "LOGIN Error : You need to be logged in to LIST all the files. Please LOGIN with your account or CREATE an account if you dont have one.";
+            int len = err.length();
+            char message[len + 1];
+            strcpy(message, err.c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+            int val = send(client_socket, message, length, 0 );
+            return;
+        } else {
+            string err = "LS OK";
+            int len = err.length();
+            char message[len + 1];
+            strcpy(message, err.c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+            int val = send(client_socket, message, length, 0 );
+        }
+        cout << client->hashuname << endl;
+        string cmd = "ls " + client->dir + "/ > server_data/ls_" + client->hashuname + ".txt";
+        system(cmd.c_str());
+        string cmd1 = "ls " + client->dir + "/ | wc -l > server_data/ls_" + client->hashuname + "_num.txt";
+        system(cmd1.c_str());
+        fstream in;
+        string file_num = "server_data/ls_" + client->hashuname + "_num.txt";
+        in.open(file_num.c_str(), ios::in);
+        string fn;
+        in >> fn;
+        in.close();
+        int len = fn.length();
+        char message[len + 1];
+        strcpy(message, fn.c_str());
+        int length = (int)strlen(message)+ 1;
+        utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+        int val = send(client_socket, message, length, 0 );
+        string ls_flie = "server_data/ls_" + client->hashuname + ".txt";
+        in.open(ls_flie.c_str(), ios::binary | ios::in);
+        string lsObj;
+        bzero(buffer, 10000);
+        while(!in.eof()){
+            in >> lsObj;
+            strcpy(buffer, lsObj.c_str());
+            utils::aesEncryption(client->dh2->getaesShaKey(), buffer, 10000);
+            int s = send(client_socket, buffer, 10000, 0);
+        }
+        in.close();
+        string del = "rm server_data/ls_" + client->hashuname + ".txt";
+        system(del.c_str());
+        string del_num = "rm server_data/ls_" + client->hashuname + "_num.txt";
+        system(del_num.c_str());
+    }
+    else if(type == "DELETEUSER") {
+        if(client->logged_in == false) {
+            string err = "LOGIN Error : You need to be logged in to DELETE the user. Please LOGIN with your account.";
+            int len = err.length();
+            char message[len + 1];
+            strcpy(message, err.c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+            int val = send(client_socket, message, length, 0 );
+            return;
+        }
+        string dir_del = "rm -rf " + client->dir;
+        system(dir_del.c_str());
+        uname_pass.erase(client->hashuname);
+        uname_mem.erase(client->hashuname);
+        client->hashuname = "";
+        client->total_mem_consumed = 0;
+        client->logged_in = false;
+        string err = "User Deleted";
+        int len = err.length();
+        char message[len + 1];
+        strcpy(message, err.c_str());
+        int length = (int)strlen(message)+ 1;
+        utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+        int val = send(client_socket, message, length, 0 );
+        return;
     }
 }
 
