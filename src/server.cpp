@@ -517,6 +517,95 @@ void parser_request(string request, int client_socket, client_soc * client)
         int val = send(client_socket, message, length, 0 );
         return;
     }
+
+    else if (type == "SHARE")
+    {
+        if(client->logged_in == false) {
+            string err = "LOGIN Error : You need to be logged in to SHARE files. Please LOGIN with your account.";
+            int len = err.length();
+            char message[len + 1];
+            strcpy(message, err.c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+            int val = send(client_socket, message, length, 0 );
+            return;
+        }
+        string file_name = "";
+        while(request[i] != '|')
+        {
+            file_name += request[i];
+            i++;
+        }
+        i++;
+        cout << "fname : " << file_name << endl;
+        string user = "";
+        while(request[i] != '|')
+        {
+            user += request[i];
+            i++;
+        }
+        cout << "user : " << user << endl;
+        string ur_name = client->hashuname;
+        string other_name = utils::findMD5(user);
+        if(uname_pass.find(other_name) == uname_pass.end())
+        {
+            string err = "Error : Invalid user";
+            int len = err.length();
+            char message[len + 1];
+            strcpy(message, err.c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+            int val = send(client_socket, message, length, 0 );
+            return;
+        }
+        string dir_make = "server_data/" + ur_name + "_" + other_name;
+        if (mkdir(dir_make.c_str(), 0777) == -1) 
+        {
+            cout << "Info :  " << " user already exists" << endl; 
+            string command = "mv " + client->dir + "/" + file_name + " " + dir_make;
+            cout << "command reun : " << command << endl;
+            int result = system(command.c_str());
+            string err;
+            if(result == 0)
+                err = "Info : File shared successfully";
+            else
+            {
+                err = "No such file or directory";
+            }
+            
+            int len = err.length();
+            char message[len + 1];
+            strcpy(message, err.c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+            int val = send(client_socket, message, length, 0 );
+            return;
+        }
+        else
+        {
+            cout << "Directory created";   
+            uname_folder_own[client->hashuname].push_back(dir_make);
+            uname_folder_shared[other_name].push_back(dir_make); 
+            string command = "mv " + client->dir + "/" + file_name + " " + dir_make;
+            cout << "command reun : " << command << endl;
+            int result = system(command.c_str());
+            string err;
+            if(result == 0)
+                err = "Info : File shared successfully";
+            else
+            {
+                err = "No such file or directory";
+            }
+            int len = err.length();
+            char message[len + 1];
+            strcpy(message, err.c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+            int val = send(client_socket, message, length, 0 );
+            return;
+        }
+
+    }
 }
 
 void client_runner_th(client_soc client)

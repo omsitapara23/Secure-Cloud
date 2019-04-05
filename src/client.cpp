@@ -186,6 +186,15 @@ string user_delete() {
     cin >> file_path;
     return file_path;
 }
+
+string user_share() {
+    string file_path,user;
+    cout << "Enter the filename on server to share: ";
+    cin >> file_path;
+    cout << "Enter the user with whom you want to share: ";
+    cin >> user;
+    return file_path + "|" + user + "|";
+}
 int main()
 {
     dff = new Deffie_Hellman;
@@ -477,7 +486,19 @@ int main()
         }
         if(input == 8)
         {
-            
+            string to  = "SHARE|" + user_share();
+            int len = to.length();
+            char message[len + 1];
+            strcpy(message, to.c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(dff->getaesShaKey(), message, length);
+            int val = send(socket_id1, message, length, 0 );
+            if(val  < 0)
+                cout << "send eroor" << endl;
+            int byteRec1 = recv(socket_id1, buffer, 10000, 0);
+            utils::aesDecryption(dff->getaesShaKey(), buffer, byteRec1);
+            string msg(buffer);
+            cout << msg << endl;
         }
         if (input == -1)
         {
