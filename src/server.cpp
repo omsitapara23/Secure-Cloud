@@ -17,14 +17,15 @@ long long MAXMEMORY = 1000000;
 atomic<int> total_Conn{0};
 atomic<int> port;
 mutex mtx;
+typedef pair<string, string> spair;
 // fstream f;
 // fstream of;
 // fstream shaf;
 map<string, string> uname_pass;                // mapping of user name to MD5 hash of its password
 map<string, long long> uname_mem;              // mapping of user name to memory consumed
 map<string, string> fname_shasum;              // mapping of file path to its SHA256 digest
-map<string, vector<string>> uname_folder_own;
-map<string, vector<string>> uname_folder_shared;
+map<string, vector<spair>> uname_folder_own;
+map<string, vector<spair>> uname_folder_shared;
 
 inline bool file_exist(const std::string& name)
 {
@@ -110,9 +111,6 @@ void parser_request(string request, int client_socket, client_soc * client)
             utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
             int val = send(client_socket, message, length, 0 );
             uname_pass[hashuname] = hashpass;
-            vector<string> fold;
-            fold.push_back(dir_make);
-            uname_folder_own[hashuname] = fold;
             // f << hashuname << endl;
             // f << hashpass << endl;
             // of << hashuname << endl;
@@ -231,25 +229,25 @@ void parser_request(string request, int client_socket, client_soc * client)
         bool exists = false;
         for(int j = 0; j < uname_folder_own[client->hashuname].size(); j++)
         {
-            path = uname_folder_own[client->hashuname][j] + "/" + file_name;
-            exists = file_exist(path);
-            if(exists)
+            if(file_name == uname_folder_own[client->hashuname][j].first)
             {
-                cout << "exists true";
-                break;
+                path = uname_folder_own[client->hashuname][j].second + "/" + file_name;
+                exists = file_exist(path);
+                if(exists)
+                    break;
             }
         }
         if(!exists)
         {
             for(int j = 0; j < uname_folder_shared[client->hashuname].size(); j++)
             {
-                path = uname_folder_shared[client->hashuname][j] + "/" + file_name;
-                exists = file_exist(path); 
+                if(file_name == uname_folder_shared[client->hashuname][j].first)
+                {
+                    path = uname_folder_shared[client->hashuname][j].second + "/" + file_name;
+                    exists = file_exist(path);
                     if(exists)
-                    {
-                        cout << "exists true";
                         break;
-                    }
+                }
             }
         }
         cout << "file name : " << file_name << endl;
@@ -257,6 +255,10 @@ void parser_request(string request, int client_socket, client_soc * client)
         if(exists == false) 
         {
             path = client->dir + "/" + file_name;
+
+            spair newItem;
+            newItem = make_pair(file_name, client->dir);
+            uname_folder_own[client->hashuname].push_back(newItem);
         }
         // if(file_exist(file_path_out) == true) {
         //     cout << "already exist" << endl;
@@ -294,6 +296,7 @@ void parser_request(string request, int client_socket, client_soc * client)
                 out << buffer[i];
             }
         }
+        
         client->total_mem_consumed += file_s;
         uname_mem[client->hashuname] += file_s;
         // of << client->hashuname << endl;
@@ -332,25 +335,25 @@ void parser_request(string request, int client_socket, client_soc * client)
         bool exists = false;
         for(int j = 0; j < uname_folder_own[client->hashuname].size(); j++)
         {
-            path = uname_folder_own[client->hashuname][j] + "/" + file_name;
-            exists = file_exist(path);
-            if(exists)
+            if(file_name == uname_folder_own[client->hashuname][j].first)
             {
-                cout << "exists true";
-                break;
+                path = uname_folder_own[client->hashuname][j].second + "/" + file_name;
+                exists = file_exist(path);
+                if(exists)
+                    break;
             }
         }
         if(!exists)
         {
             for(int j = 0; j < uname_folder_shared[client->hashuname].size(); j++)
             {
-                path = uname_folder_shared[client->hashuname][j] + "/" + file_name;
-                exists = file_exist(path); 
+                if(file_name == uname_folder_shared[client->hashuname][j].first)
+                {
+                    path = uname_folder_shared[client->hashuname][j].second + "/" + file_name;
+                    exists = file_exist(path);
                     if(exists)
-                    {
-                        cout << "exists true";
                         break;
-                    }
+                }
             }
         }
         cout << "file name : " << file_name << endl;
@@ -430,21 +433,46 @@ void parser_request(string request, int client_socket, client_soc * client)
         }
         string path;
         bool exists = false;
-        for(int j = 0; j < uname_folder_own[client->hashuname].size(); j++)
+        bool exists1 = false;
+
+         for(int j = 0; j < uname_folder_own[client->hashuname].size(); j++)
         {
-            path = uname_folder_own[client->hashuname][j] + "/" + file_to_delete;
-            exists = file_exist(path);
-            if(exists)
+            if(file_to_delete == uname_folder_own[client->hashuname][j].first)
             {
-                cout << "exists true";
-                break;
+                path = uname_folder_own[client->hashuname][j].second + "/" + file_to_delete;
+                exists = file_exist(path);
+                if(exists)
+                {
+                    exists1 = true;
+                    break;
+                }
+            }
+        }
+        if(!exists)
+        {
+            for(int j = 0; j < uname_folder_shared[client->hashuname].size(); j++)
+            {
+                if(file_to_delete == uname_folder_shared[client->hashuname][j].first)
+                {
+                    path = uname_folder_shared[client->hashuname][j].second + "/" + file_to_delete;
+                    exists = file_exist(path);
+                    if(exists)
+                        break;
+                }
             }
         }
         cout << "Path : " << path << endl;
-        if(!exists)
+        if(!exists1)
         {
             cout << "File does not exist on server" << endl;
-            string err = "File does not exist on server" ;
+            string err;
+            if(!exists)
+                err = "File does not exist on server" ;
+            else
+            {
+                err = "You do not have permission to delete the file";
+            }
+            
             int len = err.length();
             char message[len + 1];
             strcpy(message, err.c_str());
@@ -588,52 +616,99 @@ void parser_request(string request, int client_socket, client_soc * client)
             int val = send(client_socket, message, length, 0 );
             return;
         }
-        string dir_make = "server_data/" + ur_name + "_" + other_name;
-        if (mkdir(dir_make.c_str(), 0777) == -1) 
+        string dir;
+        bool exists = false;
+        for(int j = 0; j < uname_folder_own[client->hashuname].size(); j++)
         {
-            cout << "Info :  " << " user already exists" << endl; 
-            string command = "mv " + client->dir + "/" + file_name + " " + dir_make;
-            cout << "command reun : " << command << endl;
-            int result = system(command.c_str());
-            string err;
-            if(result == 0)
-                err = "Info : File shared successfully";
-            else
+            if(file_name == uname_folder_own[client->hashuname][j].first)
             {
-                err = "No such file or directory";
+                dir = uname_folder_own[client->hashuname][j].second;
+                exists = file_exist(dir + "/" + file_name);
+                if(exists)
+                    break;
             }
+        }
+        if(!exists)
+        {
+            for(int j = 0; j < uname_folder_shared[client->hashuname].size(); j++)
+            {
+                if(file_name == uname_folder_shared[client->hashuname][j].first)
+                {
+                    dir = uname_folder_shared[client->hashuname][j].second;
+                    exists = file_exist(dir + "/" + file_name);
+                    if(exists)
+                        break;
+                }
+            }
+        }
+        if(!exists)
+        {
+            string err = "Error : File does not exists";
+            int len = err.length();
+            char message[len + 1];
+            strcpy(message, err.c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+            int val = send(client_socket, message, length, 0 );
+            return;
+        }
+        
+        spair sharedItem = make_pair(file_name, dir);
+        uname_folder_shared[other_name].push_back(sharedItem);
+        string err = "Info : file shared successfully";
+        int len = err.length();
+        char message[len + 1];
+        strcpy(message, err.c_str());
+        int length = (int)strlen(message)+ 1;
+        utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+        int val = send(client_socket, message, length, 0 );
+        return;
+        // string dir_make = "server_data/" + ur_name + "_" + other_name;
+        // if (mkdir(dir_make.c_str(), 0777) == -1) 
+        // {
+        //     cout << "Info :  " << " user already exists" << endl; 
+        //     string command = "mv " + client->dir + "/" + file_name + " " + dir_make;
+        //     cout << "command reun : " << command << endl;
+        //     int result = system(command.c_str());
+        //     string err;
+        //     if(result == 0)
+        //         err = "Info : File shared successfully";
+        //     else
+        //     {
+        //         err = "No such file or directory";
+        //     }
             
-            int len = err.length();
-            char message[len + 1];
-            strcpy(message, err.c_str());
-            int length = (int)strlen(message)+ 1;
-            utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
-            int val = send(client_socket, message, length, 0 );
-            return;
-        }
-        else
-        {
-            cout << "Directory created";   
-            uname_folder_own[client->hashuname].push_back(dir_make);
-            uname_folder_shared[other_name].push_back(dir_make); 
-            string command = "mv " + client->dir + "/" + file_name + " " + dir_make;
-            cout << "command reun : " << command << endl;
-            int result = system(command.c_str());
-            string err;
-            if(result == 0)
-                err = "Info : File shared successfully";
-            else
-            {
-                err = "No such file or directory";
-            }
-            int len = err.length();
-            char message[len + 1];
-            strcpy(message, err.c_str());
-            int length = (int)strlen(message)+ 1;
-            utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
-            int val = send(client_socket, message, length, 0 );
-            return;
-        }
+        //     int len = err.length();
+        //     char message[len + 1];
+        //     strcpy(message, err.c_str());
+        //     int length = (int)strlen(message)+ 1;
+        //     utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+        //     int val = send(client_socket, message, length, 0 );
+        //     return;
+        // }
+        // else
+        // {
+        //     cout << "Directory created";   
+        //     uname_folder_own[client->hashuname].push_back(dir_make);
+        //     uname_folder_shared[other_name].push_back(dir_make); 
+        //     string command = "mv " + client->dir + "/" + file_name + " " + dir_make;
+        //     cout << "command reun : " << command << endl;
+        //     int result = system(command.c_str());
+        //     string err;
+        //     if(result == 0)
+        //         err = "Info : File shared successfully";
+        //     else
+        //     {
+        //         err = "No such file or directory";
+        //     }
+        //     int len = err.length();
+        //     char message[len + 1];
+        //     strcpy(message, err.c_str());
+        //     int length = (int)strlen(message)+ 1;
+        //     utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+        //     int val = send(client_socket, message, length, 0 );
+        //     return;
+        // }
 
     }
 }
