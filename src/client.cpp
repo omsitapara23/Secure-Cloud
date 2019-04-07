@@ -501,6 +501,7 @@ int main()
             string msg(buffer);
             cout << msg << endl;
         }
+
         if(input == 9) {
             string to = "LOGOUT|";
             int len = to.length();

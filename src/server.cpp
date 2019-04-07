@@ -729,6 +729,7 @@ void parser_request(string request, int client_socket, client_soc * client)
         // }
 
     }
+
     else if(type == "LOGOUT") {
         if(client->logged_in == false) {
             string err = "You are already logged out.";
@@ -752,6 +753,7 @@ void parser_request(string request, int client_socket, client_soc * client)
         int val = send(client_socket, message, length, 0 );
         return;
     }
+
 }
 
 void client_runner_th(client_soc client)
