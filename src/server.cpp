@@ -515,38 +515,54 @@ void parser_request(string request, int client_socket, client_soc * client)
             utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
             int val = send(client_socket, message, length, 0 );
         }
-        cout << client->hashuname << endl;
-        string cmd = "ls " + client->dir + "/ > server_data/ls_" + client->hashuname + ".txt";
-        system(cmd.c_str());
-        string cmd1 = "ls " + client->dir + "/ | wc -l > server_data/ls_" + client->hashuname + "_num.txt";
-        system(cmd1.c_str());
-        fstream in;
-        string file_num = "server_data/ls_" + client->hashuname + "_num.txt";
-        in.open(file_num.c_str(), ios::in);
-        string fn;
-        in >> fn;
-        in.close();
-        int len = fn.length();
+        vector<string> my_files;
+        for(auto itr : uname_folder_own[client->hashuname]) {
+            my_files.push_back(itr.first); 
+            cout << itr.first << endl;
+        }
+        vector<string> shared_files;
+        for(auto itr : uname_folder_shared[client->hashuname]) {
+            string temp = itr.second + "/" + itr.first;
+            cout << temp << endl;
+            if(file_exist(temp) == true) {
+                shared_files.push_back(itr.first);
+            } 
+        }
+        long long fn = my_files.size() + shared_files.size() + 1;
+        string l = IntToString(fn);
+        int len = l.length();
         char message[len + 1];
-        strcpy(message, fn.c_str());
+        strcpy(message, l.c_str());
         int length = (int)strlen(message)+ 1;
         utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
         int val = send(client_socket, message, length, 0 );
-        string ls_flie = "server_data/ls_" + client->hashuname + ".txt";
-        in.open(ls_flie.c_str(), ios::binary | ios::in);
-        string lsObj;
-        bzero(buffer, 10000);
-        while(!in.eof()){
-            in >> lsObj;
-            strcpy(buffer, lsObj.c_str());
-            utils::aesEncryption(client->dh2->getaesShaKey(), buffer, 10000);
-            int s = send(client_socket, buffer, 10000, 0);
+        int count = 0;
+        while(count < my_files.size()) {
+            int len = my_files[count].length();
+            char message[len + 1];
+            strcpy(message, my_files[count].c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+            int val = send(client_socket, message, length, 0 );
+            count++;
         }
-        in.close();
-        string del = "rm server_data/ls_" + client->hashuname + ".txt";
-        system(del.c_str());
-        string del_num = "rm server_data/ls_" + client->hashuname + "_num.txt";
-        system(del_num.c_str());
+        count = 0;
+        string sh = "SHARED with you : ";
+        len = sh.length();
+        char message1[len + 1];
+        strcpy(message1, sh.c_str());
+        length = (int)strlen(message1)+ 1;
+        utils::aesEncryption(client->dh2->getaesShaKey(), message1, length);
+        val = send(client_socket, message1, length, 0 );
+        while(count < shared_files.size()) {
+            int len = shared_files[count].length();
+            char message[len + 1];
+            strcpy(message, shared_files[count].c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+            int val = send(client_socket, message, length, 0 );
+            count++;
+        }
     }
     else if(type == "DELETEUSER") {
         if(client->logged_in == false) {
@@ -563,6 +579,8 @@ void parser_request(string request, int client_socket, client_soc * client)
         system(dir_del.c_str());
         uname_pass.erase(client->hashuname);
         uname_mem.erase(client->hashuname);
+        uname_folder_own.erase(client->hashuname);
+        uname_folder_shared.erase(client->hashuname);
         client->hashuname = "";
         client->total_mem_consumed = 0;
         client->logged_in = false;
@@ -711,6 +729,31 @@ void parser_request(string request, int client_socket, client_soc * client)
         // }
 
     }
+
+    else if(type == "LOGOUT") {
+        if(client->logged_in == false) {
+            string err = "You are already logged out.";
+            int len = err.length();
+            char message[len + 1];
+            strcpy(message, err.c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+            int val = send(client_socket, message, length, 0 );
+            return;
+        }
+        client->hashuname = "";
+        client->total_mem_consumed = 0;
+        client->logged_in = false;
+        string err = "LOGGED out";
+        int len = err.length();
+        char message[len + 1];
+        strcpy(message, err.c_str());
+        int length = (int)strlen(message)+ 1;
+        utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+        int val = send(client_socket, message, length, 0 );
+        return;
+    }
+
 }
 
 void client_runner_th(client_soc client)

@@ -456,7 +456,7 @@ int main()
                 int fn = stoi(file_num);
                 cout << fn << endl;
                 int count = 0;
-                while(count <= fn){
+                while(count < fn){
                     bzero(buffer1, 10000);
                     int byteRec = recv(socket_id1, buffer1, 10000, 0);
                     if(count == fn) {
@@ -488,6 +488,22 @@ int main()
         if(input == 8)
         {
             string to  = "SHARE|" + user_share();
+            int len = to.length();
+            char message[len + 1];
+            strcpy(message, to.c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(dff->getaesShaKey(), message, length);
+            int val = send(socket_id1, message, length, 0 );
+            if(val  < 0)
+                cout << "send eroor" << endl;
+            int byteRec1 = recv(socket_id1, buffer, 10000, 0);
+            utils::aesDecryption(dff->getaesShaKey(), buffer, byteRec1);
+            string msg(buffer);
+            cout << msg << endl;
+        }
+
+        if(input == 9) {
+            string to = "LOGOUT|";
             int len = to.length();
             char message[len + 1];
             strcpy(message, to.c_str());
