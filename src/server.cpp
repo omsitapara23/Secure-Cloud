@@ -287,7 +287,7 @@ void parser_request(string request, int client_socket, client_soc * client)
             memset(buffer, 0, 10000);
             byteRecieved = recv(client_socket, buffer, sizeof(buffer), 0);
             cout << "rec: " << byteRecieved << endl;
-            utils::aesDecryption(client->dh2->getaesShaKey(), buffer, byteRecieved);
+            // utils::aesDecryption(client->dh2->getaesShaKey(), buffer, byteRecieved);
             numBytes += byteRecieved;        // of << client->hashuname << endl;
         // of << client->total_mem_consumed << endl;
             cout << "numBytes: " << numBytes << endl;
@@ -392,18 +392,19 @@ void parser_request(string request, int client_socket, client_soc * client)
             utils::aesEncryption(client->dh2->getaesShaKey(), message1, length);
             val = send(client_socket, message1, length, 0 );
             int curPoint = 0;
+            usleep(100000);
             while(!in.eof()) {
                 bzero(buffer, sizeof(buffer));
                 in.read(buffer, 10000);
                 curPoint += 10000;
                 if(curPoint < fs) {
                     int length = (int)strlen(buffer)+ 1;
-                    utils::aesEncryption(client->dh2->getaesShaKey(), buffer, 10000);
+                    // utils::aesEncryption(client->dh2->getaesShaKey(), buffer, 10000);
                     int s = send(client_socket, buffer, 10000, 0);
                     cout << "sent : " << 10000 << endl;
                 } else {
                     int length = (int)strlen(buffer)+ 1;
-                    utils::aesEncryption(client->dh2->getaesShaKey(), buffer, fs + 10000 - curPoint);
+                    // utils::aesEncryption(client->dh2->getaesShaKey(), buffer, fs + 10000 - curPoint);
                     int s = send(client_socket, buffer, fs + 10000 - curPoint, 0);
                     cout << "sent : " << fs + 10000 - curPoint << endl;
                     curPoint = fs;
@@ -729,7 +730,6 @@ void parser_request(string request, int client_socket, client_soc * client)
         // }
 
     }
-
     else if(type == "LOGOUT") {
         if(client->logged_in == false) {
             string err = "You are already logged out.";
@@ -753,7 +753,6 @@ void parser_request(string request, int client_socket, client_soc * client)
         int val = send(client_socket, message, length, 0 );
         return;
     }
-
 }
 
 void client_runner_th(client_soc client)
@@ -905,7 +904,7 @@ int main()
     //data structure for the server
     sever_address.sin_family = AF_INET;  
     sever_address.sin_addr.s_addr = INADDR_ANY;  
-    sever_address.sin_port = htons( 3425 );  
+    sever_address.sin_port = htons( 3542 );  
 
     //binding the server to listen to respective port
     if (bind(server_socket, (struct sockaddr *)&sever_address, sizeof(sever_address))<0)  

@@ -209,11 +209,11 @@ int main()
         printf("Socket Error\n");
     }
 
-    int result = inet_pton(AF_INET, "127.0.0.1", &server_addr.sin_addr);
+    int result = inet_pton(AF_INET, "192.168.116.97", &server_addr.sin_addr);
     if(result < 0)
         printf("error for inet_pton");
     server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(3425);
+    server_addr.sin_port = htons(3542);
 
     int connection = connect(socket_id, (struct sockaddr *)&server_addr, sizeof(server_addr));
     if(connection < 0)
@@ -230,8 +230,8 @@ int main()
     {
         printf("Socket Error\n");
     }
-
-    result = inet_pton(AF_INET, "127.0.0.1", &server_addr1.sin_addr);
+    usleep(5000000);
+    result = inet_pton(AF_INET, "192.168.116.97", &server_addr1.sin_addr);
     if(result < 0)
         printf("error for inet_pton");
     server_addr1.sin_family = AF_INET;
@@ -331,19 +331,17 @@ int main()
                 in.open(file_to_upload, ios::binary | ios::in);
                 int curPoint = 0;                
                 while(!in.eof()) {
-                    bzero(buffer,10000);
+                    memset(buffer, 0, sizeof(buffer));
                     in.read(buffer, 10000);
                     curPoint += 10000;
-                    string reaa(buffer);
-                    cout << reaa << endl;
                     if(curPoint < fs) {
                         int length = (int)strlen(buffer)+ 1;
-                        utils::aesEncryption(dff->getaesShaKey(), buffer, 10000);
+                        // utils::aesEncryption(dff->getaesShaKey(), buffer, 10000);
                         int s = send(socket_id1, buffer, 10000, 0);
                         cout << "sent : " << length << endl;
                     } else {
                         int length = (int)strlen(buffer)+ 1;
-                        utils::aesEncryption(dff->getaesShaKey(), buffer, fs + 10000 - curPoint);
+                        // utils::aesEncryption(dff->getaesShaKey(), buffer, fs + 10000 - curPoint);
                         int s = send(socket_id1, buffer, fs + 10000 - curPoint, 0);
                         cout << "sent : " << fs + 10000 - curPoint << endl;
                         curPoint = fs;
@@ -382,8 +380,8 @@ int main()
             cout << recv_msg << endl;
             if(recv_msg == "DOWNLOAD OK")
             {
+                bzero(buffer, 10000);
                 byteRec = recv(socket_id1, buffer, 10000, 0);
-                buffer[byteRec] = '\0';
                 recv_msg = string(buffer);
                 cout << "enc : " << recv_msg << endl;
                 utils::aesDecryption(dff->getaesShaKey(), buffer, byteRec);
@@ -394,12 +392,14 @@ int main()
                 out.open(file_to_downlolad, ios::binary | ios::out);
                 long long numBytes = 0;
                 int byteRecieved;
+                cout << "Final file size" << file_s << endl;
                 while(numBytes < file_s) {
                     memset(buffer, 0, sizeof(buffer));
                     byteRecieved = recv(socket_id1, buffer, sizeof(buffer), 0);
                     cout << byteRecieved << endl;
                     numBytes += byteRecieved;
-                    utils::aesDecryption(dff->getaesShaKey(), buffer, byteRecieved);
+                    cout << "TOTASL: " << numBytes << endl;
+                    // utils::aesDecryption(dff->getaesShaKey(), buffer, byteRecieved);
                     for (int i = 0; i < byteRecieved; i++)
                     {
                         out << buffer[i];
