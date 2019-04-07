@@ -17,12 +17,15 @@ long long MAXMEMORY = 1000000;
 atomic<int> total_Conn{0};
 atomic<int> port;
 mutex mtx;
-fstream f;
-fstream of;
-fstream shaf;
+typedef pair<string, string> spair;
+// fstream f;
+// fstream of;
+// fstream shaf;
 map<string, string> uname_pass;                // mapping of user name to MD5 hash of its password
 map<string, long long> uname_mem;              // mapping of user name to memory consumed
 map<string, string> fname_shasum;              // mapping of file path to its SHA256 digest
+map<string, vector<spair>> uname_folder_own;
+map<string, vector<spair>> uname_folder_shared;
 
 inline bool file_exist(const std::string& name)
 {
@@ -108,10 +111,10 @@ void parser_request(string request, int client_socket, client_soc * client)
             utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
             int val = send(client_socket, message, length, 0 );
             uname_pass[hashuname] = hashpass;
-            f << hashuname << endl;
-            f << hashpass << endl;
-            of << hashuname << endl;
-            of << client->total_mem_consumed << endl;
+            // f << hashuname << endl;
+            // f << hashpass << endl;
+            // of << hashuname << endl;
+            // of << client->total_mem_consumed << endl;
             client->hashuname = hashuname;
             uname_mem[client->hashuname] = 0;
             return;
@@ -222,19 +225,53 @@ void parser_request(string request, int client_socket, client_soc * client)
             return;
         }
         cout << client->dir << endl;
-        string file_path_out = client->dir + "/" + file_name;
-        if(file_exist(file_path_out) == true) {
-            cout << "already exist" << endl;
-            string err = "UPLOAD Error : file " + file_name +" already exists.";
-            int len = err.length();
-            char message[len + 1];
-            strcpy(message, err.c_str());
-            int length = (int)strlen(message)+ 1;
-            utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
-            int val = send(client_socket, message, length, 0 );
-            cout << "exiting ex" << endl;
-            return;
+        string path;
+        bool exists = false;
+        for(int j = 0; j < uname_folder_own[client->hashuname].size(); j++)
+        {
+            if(file_name == uname_folder_own[client->hashuname][j].first)
+            {
+                path = uname_folder_own[client->hashuname][j].second + "/" + file_name;
+                exists = file_exist(path);
+                if(exists)
+                    break;
+            }
         }
+        if(!exists)
+        {
+            for(int j = 0; j < uname_folder_shared[client->hashuname].size(); j++)
+            {
+                if(file_name == uname_folder_shared[client->hashuname][j].first)
+                {
+                    path = uname_folder_shared[client->hashuname][j].second + "/" + file_name;
+                    exists = file_exist(path);
+                    if(exists)
+                        break;
+                }
+            }
+        }
+        cout << "file name : " << file_name << endl;
+        cout << "path : " << path << endl;
+        if(exists == false) 
+        {
+            path = client->dir + "/" + file_name;
+
+            spair newItem;
+            newItem = make_pair(file_name, client->dir);
+            uname_folder_own[client->hashuname].push_back(newItem);
+        }
+        // if(file_exist(file_path_out) == true) {
+        //     cout << "already exist" << endl;
+        //     string err = "UPLOAD Error : file " + file_name +" already exists.";
+        //     int len = err.length();
+        //     char message[len + 1];
+        //     strcpy(message, err.c_str());
+        //     int length = (int)strlen(message)+ 1;
+        //     utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+        //     int val = send(client_socket, message, length, 0 );
+        //     cout << "exiting ex" << endl;
+        //     return;
+        // }
         string s = "UPLOAD OK";
         int len = s.length();
         char message[len + 1];
@@ -243,7 +280,7 @@ void parser_request(string request, int client_socket, client_soc * client)
         utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
         int val = send(client_socket, message, length, 0 );
         fstream out;
-        out.open(file_path_out, ios::binary | ios::out);
+        out.open(path, ios::binary | ios::out);
         long long numBytes = 0;
         int byteRecieved;
         while(numBytes < file_s) {
@@ -251,17 +288,19 @@ void parser_request(string request, int client_socket, client_soc * client)
             byteRecieved = recv(client_socket, buffer, sizeof(buffer), 0);
             cout << "rec: " << byteRecieved << endl;
             utils::aesDecryption(client->dh2->getaesShaKey(), buffer, byteRecieved);
-            numBytes += byteRecieved;
+            numBytes += byteRecieved;        // of << client->hashuname << endl;
+        // of << client->total_mem_consumed << endl;
             cout << "numBytes: " << numBytes << endl;
             for (int i = 0; i < byteRecieved; i++)
             {
                 out << buffer[i];
             }
         }
+        
         client->total_mem_consumed += file_s;
         uname_mem[client->hashuname] += file_s;
-        of << client->hashuname << endl;
-        of << client->total_mem_consumed << endl;
+        // of << client->hashuname << endl;
+        // of << client->total_mem_consumed << endl;
         out.close();
         cout << "File successfully uploaded.." << endl;
         string err = "File successfully uploaded.";
@@ -292,9 +331,34 @@ void parser_request(string request, int client_socket, client_soc * client)
             i++;
         }
         i++;
+        string path;
+        bool exists = false;
+        for(int j = 0; j < uname_folder_own[client->hashuname].size(); j++)
+        {
+            if(file_name == uname_folder_own[client->hashuname][j].first)
+            {
+                path = uname_folder_own[client->hashuname][j].second + "/" + file_name;
+                exists = file_exist(path);
+                if(exists)
+                    break;
+            }
+        }
+        if(!exists)
+        {
+            for(int j = 0; j < uname_folder_shared[client->hashuname].size(); j++)
+            {
+                if(file_name == uname_folder_shared[client->hashuname][j].first)
+                {
+                    path = uname_folder_shared[client->hashuname][j].second + "/" + file_name;
+                    exists = file_exist(path);
+                    if(exists)
+                        break;
+                }
+            }
+        }
         cout << "file name : " << file_name << endl;
-        string path = client->dir + "/" + file_name;
-        if(file_exist(path) == false)
+        cout << "path : " << path << endl;
+        if(!exists)
         {
             string err = "Download Error: File does not exist on server";
             int len = err.length();
@@ -367,12 +431,48 @@ void parser_request(string request, int client_socket, client_soc * client)
             file_to_delete += request[i];
             i++;
         }
-        string path = client->dir + "/" + file_to_delete;
+        string path;
+        bool exists = false;
+        bool exists1 = false;
+
+         for(int j = 0; j < uname_folder_own[client->hashuname].size(); j++)
+        {
+            if(file_to_delete == uname_folder_own[client->hashuname][j].first)
+            {
+                path = uname_folder_own[client->hashuname][j].second + "/" + file_to_delete;
+                exists = file_exist(path);
+                if(exists)
+                {
+                    exists1 = true;
+                    break;
+                }
+            }
+        }
+        if(!exists)
+        {
+            for(int j = 0; j < uname_folder_shared[client->hashuname].size(); j++)
+            {
+                if(file_to_delete == uname_folder_shared[client->hashuname][j].first)
+                {
+                    path = uname_folder_shared[client->hashuname][j].second + "/" + file_to_delete;
+                    exists = file_exist(path);
+                    if(exists)
+                        break;
+                }
+            }
+        }
         cout << "Path : " << path << endl;
-        if(!file_exist(path))
+        if(!exists1)
         {
             cout << "File does not exist on server" << endl;
-            string err = "File does not exist on server" ;
+            string err;
+            if(!exists)
+                err = "File does not exist on server" ;
+            else
+            {
+                err = "You do not have permission to delete the file";
+            }
+            
             int len = err.length();
             char message[len + 1];
             strcpy(message, err.c_str());
@@ -415,38 +515,54 @@ void parser_request(string request, int client_socket, client_soc * client)
             utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
             int val = send(client_socket, message, length, 0 );
         }
-        cout << client->hashuname << endl;
-        string cmd = "ls " + client->dir + "/ > server_data/ls_" + client->hashuname + ".txt";
-        system(cmd.c_str());
-        string cmd1 = "ls " + client->dir + "/ | wc -l > server_data/ls_" + client->hashuname + "_num.txt";
-        system(cmd1.c_str());
-        fstream in;
-        string file_num = "server_data/ls_" + client->hashuname + "_num.txt";
-        in.open(file_num.c_str(), ios::in);
-        string fn;
-        in >> fn;
-        in.close();
-        int len = fn.length();
+        vector<string> my_files;
+        for(auto itr : uname_folder_own[client->hashuname]) {
+            my_files.push_back(itr.first); 
+            cout << itr.first << endl;
+        }
+        vector<string> shared_files;
+        for(auto itr : uname_folder_shared[client->hashuname]) {
+            string temp = itr.second + "/" + itr.first;
+            cout << temp << endl;
+            if(file_exist(temp) == true) {
+                shared_files.push_back(itr.first);
+            } 
+        }
+        long long fn = my_files.size() + shared_files.size() + 1;
+        string l = IntToString(fn);
+        int len = l.length();
         char message[len + 1];
-        strcpy(message, fn.c_str());
+        strcpy(message, l.c_str());
         int length = (int)strlen(message)+ 1;
         utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
         int val = send(client_socket, message, length, 0 );
-        string ls_flie = "server_data/ls_" + client->hashuname + ".txt";
-        in.open(ls_flie.c_str(), ios::binary | ios::in);
-        string lsObj;
-        bzero(buffer, 10000);
-        while(!in.eof()){
-            in >> lsObj;
-            strcpy(buffer, lsObj.c_str());
-            utils::aesEncryption(client->dh2->getaesShaKey(), buffer, 10000);
-            int s = send(client_socket, buffer, 10000, 0);
+        int count = 0;
+        while(count < my_files.size()) {
+            int len = my_files[count].length();
+            char message[len + 1];
+            strcpy(message, my_files[count].c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+            int val = send(client_socket, message, length, 0 );
+            count++;
         }
-        in.close();
-        string del = "rm server_data/ls_" + client->hashuname + ".txt";
-        system(del.c_str());
-        string del_num = "rm server_data/ls_" + client->hashuname + "_num.txt";
-        system(del_num.c_str());
+        count = 0;
+        string sh = "SHARED with you : ";
+        len = sh.length();
+        char message1[len + 1];
+        strcpy(message1, sh.c_str());
+        length = (int)strlen(message1)+ 1;
+        utils::aesEncryption(client->dh2->getaesShaKey(), message1, length);
+        val = send(client_socket, message1, length, 0 );
+        while(count < shared_files.size()) {
+            int len = shared_files[count].length();
+            char message[len + 1];
+            strcpy(message, shared_files[count].c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+            int val = send(client_socket, message, length, 0 );
+            count++;
+        }
     }
     else if(type == "DELETEUSER") {
         if(client->logged_in == false) {
@@ -463,10 +579,171 @@ void parser_request(string request, int client_socket, client_soc * client)
         system(dir_del.c_str());
         uname_pass.erase(client->hashuname);
         uname_mem.erase(client->hashuname);
+        uname_folder_own.erase(client->hashuname);
+        uname_folder_shared.erase(client->hashuname);
         client->hashuname = "";
         client->total_mem_consumed = 0;
         client->logged_in = false;
         string err = "User Deleted";
+        int len = err.length();
+        char message[len + 1];
+        strcpy(message, err.c_str());
+        int length = (int)strlen(message)+ 1;
+        utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+        int val = send(client_socket, message, length, 0 );
+        return;
+    }
+
+    else if (type == "SHARE")
+    {
+        if(client->logged_in == false) {
+            string err = "LOGIN Error : You need to be logged in to SHARE files. Please LOGIN with your account.";
+            int len = err.length();
+            char message[len + 1];
+            strcpy(message, err.c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+            int val = send(client_socket, message, length, 0 );
+            return;
+        }
+        string file_name = "";
+        while(request[i] != '|')
+        {
+            file_name += request[i];
+            i++;
+        }
+        i++;
+        cout << "fname : " << file_name << endl;
+        string user = "";
+        while(request[i] != '|')
+        {
+            user += request[i];
+            i++;
+        }
+        cout << "user : " << user << endl;
+        string ur_name = client->hashuname;
+        string other_name = utils::findMD5(user);
+        if(uname_pass.find(other_name) == uname_pass.end())
+        {
+            string err = "Error : Invalid user";
+            int len = err.length();
+            char message[len + 1];
+            strcpy(message, err.c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+            int val = send(client_socket, message, length, 0 );
+            return;
+        }
+        string dir;
+        bool exists = false;
+        for(int j = 0; j < uname_folder_own[client->hashuname].size(); j++)
+        {
+            if(file_name == uname_folder_own[client->hashuname][j].first)
+            {
+                dir = uname_folder_own[client->hashuname][j].second;
+                exists = file_exist(dir + "/" + file_name);
+                if(exists)
+                    break;
+            }
+        }
+        if(!exists)
+        {
+            for(int j = 0; j < uname_folder_shared[client->hashuname].size(); j++)
+            {
+                if(file_name == uname_folder_shared[client->hashuname][j].first)
+                {
+                    dir = uname_folder_shared[client->hashuname][j].second;
+                    exists = file_exist(dir + "/" + file_name);
+                    if(exists)
+                        break;
+                }
+            }
+        }
+        if(!exists)
+        {
+            string err = "Error : File does not exists";
+            int len = err.length();
+            char message[len + 1];
+            strcpy(message, err.c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+            int val = send(client_socket, message, length, 0 );
+            return;
+        }
+        
+        spair sharedItem = make_pair(file_name, dir);
+        uname_folder_shared[other_name].push_back(sharedItem);
+        string err = "Info : file shared successfully";
+        int len = err.length();
+        char message[len + 1];
+        strcpy(message, err.c_str());
+        int length = (int)strlen(message)+ 1;
+        utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+        int val = send(client_socket, message, length, 0 );
+        return;
+        // string dir_make = "server_data/" + ur_name + "_" + other_name;
+        // if (mkdir(dir_make.c_str(), 0777) == -1) 
+        // {
+        //     cout << "Info :  " << " user already exists" << endl; 
+        //     string command = "mv " + client->dir + "/" + file_name + " " + dir_make;
+        //     cout << "command reun : " << command << endl;
+        //     int result = system(command.c_str());
+        //     string err;
+        //     if(result == 0)
+        //         err = "Info : File shared successfully";
+        //     else
+        //     {
+        //         err = "No such file or directory";
+        //     }
+            
+        //     int len = err.length();
+        //     char message[len + 1];
+        //     strcpy(message, err.c_str());
+        //     int length = (int)strlen(message)+ 1;
+        //     utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+        //     int val = send(client_socket, message, length, 0 );
+        //     return;
+        // }
+        // else
+        // {
+        //     cout << "Directory created";   
+        //     uname_folder_own[client->hashuname].push_back(dir_make);
+        //     uname_folder_shared[other_name].push_back(dir_make); 
+        //     string command = "mv " + client->dir + "/" + file_name + " " + dir_make;
+        //     cout << "command reun : " << command << endl;
+        //     int result = system(command.c_str());
+        //     string err;
+        //     if(result == 0)
+        //         err = "Info : File shared successfully";
+        //     else
+        //     {
+        //         err = "No such file or directory";
+        //     }
+        //     int len = err.length();
+        //     char message[len + 1];
+        //     strcpy(message, err.c_str());
+        //     int length = (int)strlen(message)+ 1;
+        //     utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+        //     int val = send(client_socket, message, length, 0 );
+        //     return;
+        // }
+
+    }
+    else if(type == "LOGOUT") {
+        if(client->logged_in == false) {
+            string err = "You are already logged out.";
+            int len = err.length();
+            char message[len + 1];
+            strcpy(message, err.c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+            int val = send(client_socket, message, length, 0 );
+            return;
+        }
+        client->hashuname = "";
+        client->total_mem_consumed = 0;
+        client->logged_in = false;
+        string err = "LOGGED out";
         int len = err.length();
         char message[len + 1];
         strcpy(message, err.c_str());
@@ -570,31 +847,31 @@ int main()
     int channels = 0;
     int marker = 0;
     string u,p;
-    f.open("server_data/uname_pass.txt", ios::in);
-    while(!f.eof()) {
-        f >> u;
-        f >> p;
-        uname_pass[u] = p;
-    }
-    f.close();
-    long long allcMem;
-    of.open("server_data/uname_mem.txt", ios::in);
-    while(!of.eof()) {
-        of >> u;
-        of >> allcMem;
-        uname_mem[u] = allcMem;
-    }
-    of.close();
-    shaf.open("server_data/fname_shasum.txt", ios::in);
-    while(!shaf.eof()) {
-        shaf >> u;
-        shaf >> p;
-        fname_shasum[u] = p;
-    }
-    shaf.close();
-    f.open("server_data/uname_pass.txt", ios::out | ios::app);
-    of.open("server_data/uname_mem.txt", ios::out | ios::app);
-    shaf.open("server_data/fname_shasum.txt", ios::out | ios::app);
+    // f.open("server_data/uname_pass.txt", ios::in);
+    // while(!f.eof()) {
+    //     f >> u;
+    //     f >> p;
+    //     uname_pass[u] = p;
+    // }
+    // f.close();
+    // long long allcMem;
+    // of.open("server_data/uname_mem.txt", ios::in);
+    // while(!of.eof()) {
+    //     of >> u;
+    //     of >> allcMem;
+    //     uname_mem[u] = allcMem;
+    // }
+    // of.close();
+    // shaf.open("server_data/fname_shasum.txt", ios::in);
+    // while(!shaf.eof()) {
+    //     shaf >> u;
+    //     shaf >> p;
+    //     fname_shasum[u] = p;
+    // }
+    // shaf.close();
+    // f.open("server_data/uname_pass.txt", ios::out | ios::app);
+    // of.open("server_data/uname_mem.txt", ios::out | ios::app);
+    // shaf.open("server_data/fname_shasum.txt", ios::out | ios::app);
     struct sockaddr_in sever_address;
     char buffer[4096];
 
