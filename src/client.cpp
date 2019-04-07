@@ -209,7 +209,7 @@ int main()
         printf("Socket Error\n");
     }
 
-    int result = inet_pton(AF_INET, "192.168.116.97", &server_addr.sin_addr);
+    int result = inet_pton(AF_INET, "192.168.117.209", &server_addr.sin_addr);
     if(result < 0)
         printf("error for inet_pton");
     server_addr.sin_family = AF_INET;
@@ -231,7 +231,7 @@ int main()
         printf("Socket Error\n");
     }
     usleep(5000000);
-    result = inet_pton(AF_INET, "192.168.116.97", &server_addr1.sin_addr);
+    result = inet_pton(AF_INET, "192.168.117.209", &server_addr1.sin_addr);
     if(result < 0)
         printf("error for inet_pton");
     server_addr1.sin_family = AF_INET;

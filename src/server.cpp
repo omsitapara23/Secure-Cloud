@@ -283,6 +283,13 @@ void parser_request(string request, int client_socket, client_soc * client)
         out.open(path, ios::binary | ios::out);
         long long numBytes = 0;
         int byteRecieved;
+        char buffer_sec[10000];
+        long long count = 0;
+        int last_size = file_s%10000;
+        int sec_count = 0;
+        int packets = ceil((double)file_s/10000);
+        int packets_rec = 0;
+        cout << "LAst size " << last_size << " no of packets : " << packets << endl;
         while(numBytes < file_s) {
             memset(buffer, 0, 10000);
             byteRecieved = recv(client_socket, buffer, sizeof(buffer), 0);
@@ -290,10 +297,34 @@ void parser_request(string request, int client_socket, client_soc * client)
             // utils::aesDecryption(client->dh2->getaesShaKey(), buffer, byteRecieved);
             numBytes += byteRecieved;        // of << client->hashuname << endl;
         // of << client->total_mem_consumed << endl;
+            count += byteRecieved;
             cout << "numBytes: " << numBytes << endl;
-            for (int i = 0; i < byteRecieved; i++)
+            for (int j = 0; j < byteRecieved; j++)
             {
-                out << buffer[i];
+                buffer_sec[sec_count] = buffer[j];
+                sec_count++;
+                if(sec_count == 10000)
+                {
+                    cout << "Decryption of packet " << packets_rec << endl;
+                    // utils::aesDecryption(client->dh2->getaesShaKey(), buffer_sec, 10000);
+                    for(int k = 0; k < 10000; k++)
+                    {
+                        out << buffer_sec[k];
+                    }
+                    sec_count = 0;
+                    packets_rec++;
+                    memset(buffer_sec, 0, 10000);
+                }
+                else if(packets - packets_rec == 1 && sec_count == last_size)
+                {
+                    cout << "LAst packet " << endl;
+                    // utils::aesDecryption(client->dh2->getaesShaKey(), buffer_sec, last_size);
+                    for(int k = 0; k < last_size; k++)
+                    {
+                        out << buffer_sec[k];
+                    }
+                }
+
             }
         }
         
