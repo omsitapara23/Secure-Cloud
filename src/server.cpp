@@ -294,8 +294,12 @@ void parser_request(string request, int client_socket, client_soc * client)
             memset(buffer, 0, 10000);
             byteRecieved = recv(client_socket, buffer, sizeof(buffer), 0);
             cout << "rec: " << byteRecieved << endl;
-            // utils::aesDecryption(client->dh2->getaesShaKey(), buffer, byteRecieved);
-            numBytes += byteRecieved;        // of << client->hashuname << endl;
+            // utils::aesDecryption(client->dh2->getaesShaKey(), buffer, byteRecieved+1);
+            numBytes += byteRecieved;
+            // for(int k = 0; k < byteRecieved; k++)
+            // {
+            //     out << buffer[k];
+            // }        // of << client->hashuname << endl;
         // of << client->total_mem_consumed << endl;
             count += byteRecieved;
             cout << "numBytes: " << numBytes << endl;
@@ -306,11 +310,13 @@ void parser_request(string request, int client_socket, client_soc * client)
                 if(sec_count == 10000)
                 {
                     cout << "Decryption of packet " << packets_rec << endl;
-                    // utils::aesDecryption(client->dh2->getaesShaKey(), buffer_sec, 10000);
+                    utils::aesDecryption(client->dh2->getaesShaKey(), buffer_sec, 10001);
                     for(int k = 0; k < 10000; k++)
                     {
+                        cout << buffer[k];
                         out << buffer_sec[k];
                     }
+                    cout << endl;
                     sec_count = 0;
                     packets_rec++;
                     memset(buffer_sec, 0, 10000);
@@ -318,7 +324,7 @@ void parser_request(string request, int client_socket, client_soc * client)
                 else if(packets - packets_rec == 1 && sec_count == last_size)
                 {
                     cout << "LAst packet " << endl;
-                    // utils::aesDecryption(client->dh2->getaesShaKey(), buffer_sec, last_size);
+                    utils::aesDecryption(client->dh2->getaesShaKey(), buffer_sec, last_size+1);
                     for(int k = 0; k < last_size; k++)
                     {
                         out << buffer_sec[k];
@@ -430,13 +436,13 @@ void parser_request(string request, int client_socket, client_soc * client)
                 curPoint += 10000;
                 if(curPoint < fs) {
                     int length = (int)strlen(buffer)+ 1;
-                    // utils::aesEncryption(client->dh2->getaesShaKey(), buffer, 10000);
+                    utils::aesEncryption(client->dh2->getaesShaKey(), buffer, 10001);
                     int s = send(client_socket, buffer, 10000, 0);
                     cout << "sent : " << 10000 << endl;
                 } else {
                     int length = (int)strlen(buffer)+ 1;
-                    // utils::aesEncryption(client->dh2->getaesShaKey(), buffer, fs + 10000 - curPoint);
-                    int s = send(client_socket, buffer, fs + 10000 - curPoint, 0);
+                    utils::aesEncryption(client->dh2->getaesShaKey(), buffer, fs + 10000 - curPoint+1);
+                    int s = send(client_socket, buffer, fs + 10000 - curPoint , 0);
                     cout << "sent : " << fs + 10000 - curPoint << endl;
                     curPoint = fs;
                 }

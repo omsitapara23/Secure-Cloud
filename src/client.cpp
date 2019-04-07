@@ -336,12 +336,12 @@ int main()
                     curPoint += 10000;
                     if(curPoint < fs) {
                         int length = (int)strlen(buffer)+ 1;
-                        // utils::aesEncryption(dff->getaesShaKey(), buffer, 10000);
+                        utils::aesEncryption(dff->getaesShaKey(), buffer, 10000);
                         int s = send(socket_id1, buffer, 10000, 0);
                         cout << "sent : " << length << endl;
                     } else {
                         int length = (int)strlen(buffer)+ 1;
-                        // utils::aesEncryption(dff->getaesShaKey(), buffer, fs + 10000 - curPoint);
+                        utils::aesEncryption(dff->getaesShaKey(), buffer, fs + 10000 - curPoint+1);
                         int s = send(socket_id1, buffer, fs + 10000 - curPoint, 0);
                         cout << "sent : " << fs + 10000 - curPoint << endl;
                         curPoint = fs;
@@ -392,20 +392,56 @@ int main()
                 out.open(file_to_downlolad, ios::binary | ios::out);
                 long long numBytes = 0;
                 int byteRecieved;
-                cout << "Final file size" << file_s << endl;
+                char buffer_sec[10000];
+                long long count = 0;
+                int last_size = file_s%10000;
+                int sec_count = 0;
+                int packets = ceil((double)file_s/10000);
+                int packets_rec = 0;
+                cout << "LAst size " << last_size << " no of packets : " << packets << endl;
                 while(numBytes < file_s) {
-                    memset(buffer, 0, sizeof(buffer));
+                    memset(buffer, 0, 10000);
                     byteRecieved = recv(socket_id1, buffer, sizeof(buffer), 0);
-                    cout << byteRecieved << endl;
+                    cout << "rec: " << byteRecieved << endl;
+                    // utils::aesDecryption(client->dh2->getaesShaKey(), buffer, byteRecieved+1);
                     numBytes += byteRecieved;
-                    cout << "TOTASL: " << numBytes << endl;
-                    // utils::aesDecryption(dff->getaesShaKey(), buffer, byteRecieved);
-                    for (int i = 0; i < byteRecieved; i++)
+                    // for(int k = 0; k < byteRecieved; k++)
+                    // {
+                    //     out << buffer[k];
+                    // }        // of << client->hashuname << endl;
+                // of << client->total_mem_consumed << endl;
+                    count += byteRecieved;
+                    cout << "numBytes: " << numBytes << endl;
+                    for (int j = 0; j < byteRecieved; j++)
                     {
-                        out << buffer[i];
-                    }   
-                }
+                        buffer_sec[sec_count] = buffer[j];
+                        sec_count++;
+                        if(sec_count == 10000)
+                        {
+                            cout << "Decryption of packet " << packets_rec << endl;
+                            utils::aesDecryption(dff->getaesShaKey(), buffer_sec, 10001);
+                            for(int k = 0; k < 10000; k++)
+                            {
+                                cout << buffer[k];
+                                out << buffer_sec[k];
+                            }
+                            cout << endl;
+                            sec_count = 0;
+                            packets_rec++;
+                            memset(buffer_sec, 0, 10000);
+                        }
+                        else if(packets - packets_rec == 1 && sec_count == last_size)
+                        {
+                            cout << "LAst packet " << endl;
+                            utils::aesDecryption(dff->getaesShaKey(), buffer_sec, last_size+1);
+                            for(int k = 0; k < last_size; k++)
+                            {
+                                out << buffer_sec[k];
+                            }
+                        }
 
+                    }
+                }
                 cout << "Download complete.." << endl;
 
             }
