@@ -197,6 +197,9 @@ string user_share() {
 }
 int main()
 {
+    string server_ip;
+    cout << "Enter Ip of ther server : ";
+    cin >> server_ip; 
     dff = new Deffie_Hellman;
     char buffer[10000] = {0};
     int read_val;
@@ -209,7 +212,7 @@ int main()
         printf("Socket Error\n");
     }
 
-    int result = inet_pton(AF_INET, "192.168.117.209", &server_addr.sin_addr);
+    int result = inet_pton(AF_INET, server_ip.c_str(), &server_addr.sin_addr);
     if(result < 0)
         printf("error for inet_pton");
     server_addr.sin_family = AF_INET;
@@ -231,7 +234,7 @@ int main()
         printf("Socket Error\n");
     }
     usleep(5000000);
-    result = inet_pton(AF_INET, "192.168.117.209", &server_addr1.sin_addr);
+    result = inet_pton(AF_INET, server_ip.c_str(), &server_addr1.sin_addr);
     if(result < 0)
         printf("error for inet_pton");
     server_addr1.sin_family = AF_INET;
@@ -378,16 +381,15 @@ int main()
             utils::aesDecryption(dff->getaesShaKey(), buffer, byteRec);
             recv_msg = string(buffer);
             cout << recv_msg << endl;
-            if(recv_msg == "DOWNLOAD OK")
+            string size, type;
+            int count = 0;
+            type = recv_msg.substr(0,recv_msg.find(':'));
+            cout << type << endl;
+            size = recv_msg.substr(recv_msg.find(':') + 1, recv_msg.length() - type.length() - 1);
+            cout  << size << endl;
+            if(type == "DOWNLOAD OK")
             {
-                bzero(buffer, 10000);
-                byteRec = recv(socket_id1, buffer, 10000, 0);
-                recv_msg = string(buffer);
-                cout << "enc : " << recv_msg << endl;
-                utils::aesDecryption(dff->getaesShaKey(), buffer, byteRec);
-                recv_msg = string(buffer);
-                cout <<  "sizxe : " << recv_msg << endl;
-                long long file_s = stoll(recv_msg);
+                long long file_s = stoll(size);
                 fstream out;
                 out.open(file_to_downlolad, ios::binary | ios::out);
                 long long numBytes = 0;

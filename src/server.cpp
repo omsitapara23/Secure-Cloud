@@ -409,27 +409,26 @@ void parser_request(string request, int client_socket, client_soc * client)
         else
         {
             string err = "DOWNLOAD OK";
-            int len = err.length();
-            char message[len + 1];
-            strcpy(message, err.c_str());
-            int length = (int)strlen(message)+ 1;
-            utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
-            int val = send(client_socket, message, length, 0 );
+            // int len = err.length();
+            // char message[len + 1];
+            // strcpy(message, err.c_str());
+            // int length = (int)strlen(message)+ 1;
+            // utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+            // int val = send(client_socket, message, length, 0 );
             fstream in;
             in.open(path, ios::binary|ios::in);
             struct stat FS;
             int rc = stat(path.c_str(), &FS);
             long long fs;
             fs = FS.st_size;
-            string size = to_string(fs);
-            len = size.length();
+            string size = err + ":" + to_string(fs);
+            int len = size.length();
             char message1[len + 1];
             strcpy(message1, size.c_str());
-            length = (int)strlen(message1)+ 1;
+            int length = (int)strlen(message1)+ 1;
             utils::aesEncryption(client->dh2->getaesShaKey(), message1, length);
-            val = send(client_socket, message1, length, 0 );
+            int val = send(client_socket, message1, length, 0 );
             int curPoint = 0;
-            usleep(100000);
             while(!in.eof()) {
                 bzero(buffer, sizeof(buffer));
                 in.read(buffer, 10000);
