@@ -389,6 +389,10 @@ int main()
             cout  << size << endl;
             if(type == "DOWNLOAD OK")
             {
+                string ready = "0";
+                int val = send(socket_id1, ready.c_str(), ready.length(), 0 );
+                if(val  < 0)
+                    cout << "send eroor" << endl;   
                 long long file_s = stoll(size);
                 fstream out;
                 out.open(file_to_downlolad, ios::binary | ios::out);

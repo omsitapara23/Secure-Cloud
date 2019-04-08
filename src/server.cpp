@@ -429,6 +429,7 @@ void parser_request(string request, int client_socket, client_soc * client)
             utils::aesEncryption(client->dh2->getaesShaKey(), message1, length);
             int val = send(client_socket, message1, length, 0 );
             int curPoint = 0;
+            int byteRecieved = recv(client_socket, buffer, sizeof(buffer), 0);
             while(!in.eof()) {
                 bzero(buffer, sizeof(buffer));
                 in.read(buffer, 10000);
