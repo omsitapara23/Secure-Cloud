@@ -197,6 +197,9 @@ string user_share() {
 }
 int main()
 {
+    string server_ip;
+    cout << "Enter Ip of ther server : ";
+    cin >> server_ip; 
     dff = new Deffie_Hellman;
     char buffer[10000] = {0};
     int read_val;
@@ -209,7 +212,7 @@ int main()
         printf("Socket Error\n");
     }
 
-    int result = inet_pton(AF_INET, "192.168.116.97", &server_addr.sin_addr);
+    int result = inet_pton(AF_INET, server_ip.c_str(), &server_addr.sin_addr);
     if(result < 0)
         printf("error for inet_pton");
     server_addr.sin_family = AF_INET;
@@ -231,7 +234,7 @@ int main()
         printf("Socket Error\n");
     }
     usleep(5000000);
-    result = inet_pton(AF_INET, "192.168.116.97", &server_addr1.sin_addr);
+    result = inet_pton(AF_INET, server_ip.c_str(), &server_addr1.sin_addr);
     if(result < 0)
         printf("error for inet_pton");
     server_addr1.sin_family = AF_INET;
@@ -336,12 +339,12 @@ int main()
                     curPoint += 10000;
                     if(curPoint < fs) {
                         int length = (int)strlen(buffer)+ 1;
-                        // utils::aesEncryption(dff->getaesShaKey(), buffer, 10000);
+                        utils::aesEncryption(dff->getaesShaKey(), buffer, 10000);
                         int s = send(socket_id1, buffer, 10000, 0);
                         cout << "sent : " << length << endl;
                     } else {
                         int length = (int)strlen(buffer)+ 1;
-                        // utils::aesEncryption(dff->getaesShaKey(), buffer, fs + 10000 - curPoint);
+                        utils::aesEncryption(dff->getaesShaKey(), buffer, fs + 10000 - curPoint+1);
                         int s = send(socket_id1, buffer, fs + 10000 - curPoint, 0);
                         cout << "sent : " << fs + 10000 - curPoint << endl;
                         curPoint = fs;
@@ -378,34 +381,69 @@ int main()
             utils::aesDecryption(dff->getaesShaKey(), buffer, byteRec);
             recv_msg = string(buffer);
             cout << recv_msg << endl;
-            if(recv_msg == "DOWNLOAD OK")
+            string size, type;
+            int count = 0;
+            type = recv_msg.substr(0,recv_msg.find(':'));
+            cout << type << endl;
+            size = recv_msg.substr(recv_msg.find(':') + 1, recv_msg.length() - type.length() - 1);
+            cout  << size << endl;
+            if(type == "DOWNLOAD OK")
             {
-                bzero(buffer, 10000);
-                byteRec = recv(socket_id1, buffer, 10000, 0);
-                recv_msg = string(buffer);
-                cout << "enc : " << recv_msg << endl;
-                utils::aesDecryption(dff->getaesShaKey(), buffer, byteRec);
-                recv_msg = string(buffer);
-                cout <<  "sizxe : " << recv_msg << endl;
-                long long file_s = stoll(recv_msg);
+                long long file_s = stoll(size);
                 fstream out;
                 out.open(file_to_downlolad, ios::binary | ios::out);
                 long long numBytes = 0;
                 int byteRecieved;
-                cout << "Final file size" << file_s << endl;
+                char buffer_sec[10000];
+                long long count = 0;
+                int last_size = file_s%10000;
+                int sec_count = 0;
+                int packets = ceil((double)file_s/10000);
+                int packets_rec = 0;
+                cout << "LAst size " << last_size << " no of packets : " << packets << endl;
                 while(numBytes < file_s) {
-                    memset(buffer, 0, sizeof(buffer));
+                    memset(buffer, 0, 10000);
                     byteRecieved = recv(socket_id1, buffer, sizeof(buffer), 0);
-                    cout << byteRecieved << endl;
+                    cout << "rec: " << byteRecieved << endl;
+                    // utils::aesDecryption(client->dh2->getaesShaKey(), buffer, byteRecieved+1);
                     numBytes += byteRecieved;
-                    cout << "TOTASL: " << numBytes << endl;
-                    // utils::aesDecryption(dff->getaesShaKey(), buffer, byteRecieved);
-                    for (int i = 0; i < byteRecieved; i++)
+                    // for(int k = 0; k < byteRecieved; k++)
+                    // {
+                    //     out << buffer[k];
+                    // }        // of << client->hashuname << endl;
+                // of << client->total_mem_consumed << endl;
+                    count += byteRecieved;
+                    cout << "numBytes: " << numBytes << endl;
+                    for (int j = 0; j < byteRecieved; j++)
                     {
-                        out << buffer[i];
-                    }   
-                }
+                        buffer_sec[sec_count] = buffer[j];
+                        sec_count++;
+                        if(sec_count == 10000)
+                        {
+                            cout << "Decryption of packet " << packets_rec << endl;
+                            utils::aesDecryption(dff->getaesShaKey(), buffer_sec, 10001);
+                            for(int k = 0; k < 10000; k++)
+                            {
+                                cout << buffer[k];
+                                out << buffer_sec[k];
+                            }
+                            cout << endl;
+                            sec_count = 0;
+                            packets_rec++;
+                            memset(buffer_sec, 0, 10000);
+                        }
+                        else if(packets - packets_rec == 1 && sec_count == last_size)
+                        {
+                            cout << "LAst packet " << endl;
+                            utils::aesDecryption(dff->getaesShaKey(), buffer_sec, last_size+1);
+                            for(int k = 0; k < last_size; k++)
+                            {
+                                out << buffer_sec[k];
+                            }
+                        }
 
+                    }
+                }
                 cout << "Download complete.." << endl;
 
             }
