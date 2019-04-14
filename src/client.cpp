@@ -9,6 +9,7 @@
 #include <sys/time.h> //FD_SET, FD_ISSET, FD_ZERO macros 
 #include <thread>
 #include <atomic>
+#include <cstdio>
 #include <sys/stat.h>
 #include "dhaes.hpp"
 #include "utils.hpp"
@@ -558,6 +559,94 @@ int main()
             utils::aesDecryption(dff->getaesShaKey(), buffer, byteRec1);
             string msg(buffer);
             cout << msg << endl;
+        }
+        if(input == 10) {
+            string fname;
+            cout << "Enter file name to run(Make sure you have it uploaded it on the server) : ";
+            cin >> fname;
+            // char ch1[1000];
+            string com_cmd;
+            cout << "Enter the command to compile the code file (provide all the necessary flags) : " << endl;
+            cin.ignore();
+            getline(cin, com_cmd);
+            // com_cmd = string(ch1);
+            // char ch2[1000];
+            string run_cmd;
+            cout << "Enter the command to run the binary (along with the cmdline args) : " << endl;
+            // cin.ignore();
+            getline(cin, run_cmd);
+            // run_cmd = string(ch2);
+            string to = "RUN|" + fname + "|" + com_cmd + "|" + run_cmd + "|";
+            cout << to << endl;
+            int len = to.length();
+            char message[len + 1];
+            strcpy(message, to.c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(dff->getaesShaKey(), message, length);
+            int val = send(socket_id1, message, length, 0 );
+            if(val  < 0)
+                cout << "send eroor" << endl;
+            int byteRec1 = recv(socket_id1, buffer, 10000, 0);
+            utils::aesDecryption(dff->getaesShaKey(), buffer, byteRec1);
+            string msg(buffer);
+            if(msg == "RUN OK") {
+                bzero(buffer, 10000);
+                int b = recv(socket_id1, buffer, 10000, 0);
+                utils::aesDecryption(dff->getaesShaKey(), buffer, b);
+                cout << "file size : " << string(buffer) << endl;
+                long long file_s = stoll(string(buffer));
+                string file_to_download = "out_" + fname + ".txt";
+                fstream out;
+                out.open(file_to_download, ios::binary | ios::out);
+                long long numBytes = 0;
+                int byteRecieved;
+                char buffer_sec[10000];
+                long long count = 0;
+                int last_size = file_s%10000;
+                int sec_count = 0;
+                int packets = ceil((double)file_s/10000);
+                int packets_rec = 0;
+                cout << "LAst size " << last_size << " no of packets : " << packets << endl;
+                send(socket_id1, "SEND FILE", strlen("SEND FILE"), 0);
+                while(numBytes < file_s) {
+                    memset(buffer, 0, 10000);
+                    byteRecieved = recv(socket_id1, buffer, sizeof(buffer), 0);
+                    cout << "rec: " << byteRecieved << endl;
+                    numBytes += byteRecieved;
+                    count += byteRecieved;
+                    cout << "numBytes: " << numBytes << endl;
+                    for (int j = 0; j < byteRecieved; j++)
+                    {
+                        buffer_sec[sec_count] = buffer[j];
+                        sec_count++;
+                        if(sec_count == 10000)
+                        {
+                            cout << "Decryption of packet " << packets_rec << endl;
+                            utils::aesDecryption(dff->getaesShaKey(), buffer_sec, 10001);
+                            for(int k = 0; k < 10000; k++)
+                            {
+                                cout << buffer[k];
+                                out << buffer_sec[k];
+                            }
+                            cout << endl;
+                            sec_count = 0;
+                            packets_rec++;
+                            memset(buffer_sec, 0, 10000);
+                        }
+                        else if(packets - packets_rec == 1 && sec_count == last_size)
+                        {
+                            cout << "LAst packet " << endl;
+                            utils::aesDecryption(dff->getaesShaKey(), buffer_sec, last_size+1);
+                            for(int k = 0; k < last_size; k++)
+                            {
+                                out << buffer_sec[k];
+                            }
+                        }
+
+                    }
+                }
+                cout << "Download complete.." << endl;
+            }
         }
         if (input == -1)
         {

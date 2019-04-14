@@ -790,6 +790,178 @@ void parser_request(string request, int client_socket, client_soc * client)
         int val = send(client_socket, message, length, 0 );
         return;
     }
+    else if(type == "RUN") {
+        if(client->logged_in == false) {
+            string err = "You are already logged out.";
+            int len = err.length();
+            char message[len + 1];
+            strcpy(message, err.c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+            int val = send(client_socket, message, length, 0 );
+            return;
+        }
+        string file_name = "";
+        while(request[i] != '|')
+        {
+            file_name += request[i];
+            i++;
+        }
+        i++;
+        string path;
+        bool exists = false;
+        for(int j = 0; j < uname_folder_own[client->hashuname].size(); j++)
+        {
+            if(file_name == uname_folder_own[client->hashuname][j].first)
+            {
+                path = uname_folder_own[client->hashuname][j].second + "/" + file_name;
+                exists = file_exist(path);
+                if(exists)
+                    break;
+            }
+        }
+        if(!exists)
+        {
+            for(int j = 0; j < uname_folder_shared[client->hashuname].size(); j++)
+            {
+                if(file_name == uname_folder_shared[client->hashuname][j].first)
+                {
+                    path = uname_folder_shared[client->hashuname][j].second + "/" + file_name;
+                    exists = file_exist(path);
+                    if(exists)
+                        break;
+                }
+            }
+        }
+        cout << "file name : " << file_name << endl;
+        cout << "path : " << path << endl;
+        if(!exists)
+        {
+            string err = "RUN Error : File does not exist on the server.";
+            int len = err.length();
+            char message[len + 1];
+            strcpy(message, err.c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+            int val = send(client_socket, message, length, 0 );
+            return;
+        }
+        else {
+            string err = "RUN OK";
+            int len = err.length();
+            char message[len + 1];
+            strcpy(message, err.c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+            int val = send(client_socket, message, length, 0 );
+            fstream in;
+            in.open(path, ios::binary|ios::in);
+            struct stat FS;
+            int rc = stat(path.c_str(), &FS);
+            long long fs;
+            fs = FS.st_size;
+            string com_cmd;
+            string run_cmd;
+            while(request[i] != '|')
+            {
+                com_cmd += request[i];
+                i++;
+            }
+            i++;
+            while(request[i] != '|')
+            {
+                run_cmd += request[i];
+                i++;
+            }
+            i++;
+            int sock = socket(AF_INET, SOCK_STREAM, 0);
+            char recvBuffer[1024];
+            if(sock < 0 )
+                printf("Socket creation failed");
+            struct sockaddr_in servAddr;
+            inet_pton(AF_INET, "127.0.0.1", &servAddr.sin_addr);
+            servAddr.sin_family = AF_INET;
+            servAddr.sin_port = htons(8000);
+            int connToServ = connect(sock, (struct sockaddr *) &servAddr , sizeof(servAddr));
+            if(connToServ < 0 )
+                cout << "Connection to VM failed." << endl;
+            recv(sock, buffer, 10000, 0);
+            cout << string(buffer) << endl;
+            bzero(buffer, 10000);
+            string to = file_name + "|" + to_string(fs) + "|" + com_cmd + "|" + run_cmd + "|";
+            send(sock, to.c_str(), to.length(), 0);
+            recv(sock, buffer, 10000, 0);
+            cout << string(buffer) << endl;
+            long long curPoint = 0;
+            while(!in.eof()) {
+                bzero(buffer, sizeof(buffer));
+                in.read(buffer, 10000);
+                curPoint += 10000;
+                if(curPoint < fs) {
+                    int s = send(sock, buffer, 10000, 0);
+                    cout << "sent : " << 10000 << endl;
+                } else {
+                    int s = send(sock, buffer, fs + 10000 - curPoint , 0);
+                    cout << "sent : " << fs + 10000 - curPoint << endl;
+                    curPoint = fs;
+                }
+            }
+            in.close();
+            string out_file = client->dir + "/out_" + file_name + ".txt";
+            bzero(buffer, 10000);
+            recv(sock, buffer, 10000, 0);
+            string file_size_vm = string(buffer);
+            fs = stoll(file_size_vm);
+            fstream outf;
+            outf.open(out_file.c_str(), ios::binary | ios::out);
+            long long numBytes = 0;
+            int byteRecieved;
+            send(sock, "SEND FILE", strlen("SEND FILE"), 0);
+            while(numBytes < fs) {
+                memset(buffer, 0, 10000);
+                byteRecieved = recv(sock, buffer, sizeof(buffer), 0);
+                cout << "rec: " << byteRecieved << endl;
+                numBytes += byteRecieved;
+                for(int j = 0; j < byteRecieved; j++) {
+                    outf << buffer[j];
+                }
+            }
+            outf.close();
+            // Work of VM completed
+            // Now send output file back to client using encryption
+            rc = stat(out_file.c_str(), &FS);
+            fs = FS.st_size;
+            in.open(out_file, ios::binary|ios::in);
+            string size = to_string(fs);
+            len = size.length();
+            char message2[len + 1];
+            strcpy(message2, size.c_str());
+            length = (int)strlen(message2)+ 1;
+            utils::aesEncryption(client->dh2->getaesShaKey(), message2, length);
+            val = send(client_socket, message2, length, 0 );
+            curPoint = 0;
+            byteRecieved = recv(client_socket, buffer, sizeof(buffer), 0);
+            cout << string(buffer) << endl;
+            while(!in.eof()) {
+                bzero(buffer, sizeof(buffer));
+                in.read(buffer, 10000);
+                curPoint += 10000;
+                if(curPoint < fs) {
+                    int length = (int)strlen(buffer)+ 1;
+                    utils::aesEncryption(client->dh2->getaesShaKey(), buffer, 10001);
+                    int s = send(client_socket, buffer, 10000, 0);
+                    cout << "sent : " << 10000 << endl;
+                } else {
+                    int length = (int)strlen(buffer)+ 1;
+                    utils::aesEncryption(client->dh2->getaesShaKey(), buffer, fs + 10000 - curPoint+1);
+                    int s = send(client_socket, buffer, fs + 10000 - curPoint , 0);
+                    cout << "sent : " << fs + 10000 - curPoint << endl;
+                    curPoint = fs;
+                }
+            }
+            in.close();
+        }    
+    }
 }
 
 void client_runner_th(client_soc client)
