@@ -53,7 +53,6 @@ void execute_func(int sock) {
     i++;
     fs = stoll(file_size);
     fstream code;
-    fname = dir_make + "/" + fname;
     code.open(fname.c_str(), ios::binary | ios::out);
     long long numBytes = 0;
     int byteRecieved;
@@ -133,8 +132,8 @@ void execute_func(int sock) {
         }
         in.close();
     }
-    string del = "rm -rf " + dir_make;
-    system(del.c_str());
+    // string del = "rm -rf " + dir_make;
+    // system(del.c_str());
 }
 void accept_thread(int sockid, int servSize) {
     int i = 0;

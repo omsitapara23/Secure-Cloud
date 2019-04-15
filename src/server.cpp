@@ -13,6 +13,7 @@
 #include "utils.hpp"
 #include <sys/stat.h> 
 using namespace std;
+atomic<int> curr{0};
 long long MAXMEMORY = 1000000;
 atomic<int> total_Conn{0};
 atomic<int> port;
@@ -26,6 +27,7 @@ map<string, long long> uname_mem;              // mapping of user name to memory
 map<string, string> fname_shasum;              // mapping of file path to its SHA256 digest
 map<string, vector<spair>> uname_folder_own;
 map<string, vector<spair>> uname_folder_shared;
+map<string, string> verify_sha1;
 
 inline bool file_exist(const std::string& name)
 {
@@ -347,6 +349,16 @@ void parser_request(string request, int client_socket, client_soc * client)
         length = (int)strlen(message)+ 1;
         utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
         val = send(client_socket, message, length, 0 );
+        int to_use = curr++;
+        string command = "sha1sum " + path + " >> " + to_string(to_use) + ".txt";
+        system(command.c_str());
+        fstream file;
+        file.open(to_string(to_use) + ".txt",ios::in);
+        string sum;
+        file >> sum;
+        verify_sha1[path] = sum;
+        command = "rm " + to_string(to_use) + ".txt";
+        system(command.c_str());
         return;
     }
     else if(type == "DOWNLOAD")
@@ -408,6 +420,27 @@ void parser_request(string request, int client_socket, client_soc * client)
         }
         else
         {
+            int to_use = curr++;
+            string command = "sha1sum " + path + " >> " + to_string(to_use) + ".txt";
+            system(command.c_str());
+            fstream file;
+            file.open(to_string(to_use) + ".txt",ios::in);
+            string sum;
+            file >> sum;
+            command = "rm " + to_string(to_use) + ".txt";
+            system(command.c_str());
+            if(sum != verify_sha1[path])
+            {
+                string err = "Download Error: File does not exist on server";
+                int len = err.length();
+                char message[len + 1];
+                strcpy(message, err.c_str());
+                int length = (int)strlen(message)+ 1;
+                utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+                int val = send(client_socket, message, length, 0 );
+                return;
+            }
+            cout << "Verified sha1sum :)" << endl;  
             string err = "DOWNLOAD OK";
             // int len = err.length();
             // char message[len + 1];
@@ -961,6 +994,96 @@ void parser_request(string request, int client_socket, client_soc * client)
             }
             in.close();
         }    
+    }
+    else if (type == "VERIFY")
+    {
+        if(client->logged_in == false) {
+            string err = "You are already logged out.";
+            int len = err.length();
+            char message[len + 1];
+            strcpy(message, err.c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+            int val = send(client_socket, message, length, 0 );
+            return;
+        }
+        string file_name = "";
+        while(request[i] != '|')
+        {
+            file_name += request[i];
+            i++;
+        }
+        i++;
+        string path;
+        bool exists = false;
+        for(int j = 0; j < uname_folder_own[client->hashuname].size(); j++)
+        {
+            if(file_name == uname_folder_own[client->hashuname][j].first)
+            {
+                path = uname_folder_own[client->hashuname][j].second + "/" + file_name;
+                exists = file_exist(path);
+                if(exists)
+                    break;
+            }
+        }
+        if(!exists)
+        {
+            for(int j = 0; j < uname_folder_shared[client->hashuname].size(); j++)
+            {
+                if(file_name == uname_folder_shared[client->hashuname][j].first)
+                {
+                    path = uname_folder_shared[client->hashuname][j].second + "/" + file_name;
+                    exists = file_exist(path);
+                    if(exists)
+                        break;
+                }
+            }
+        }
+        cout << "file name : " << file_name << endl;
+        cout << "path : " << path << endl;
+        if(!exists)
+        {
+            string err = "Error : File does not exist on the server.";
+            int len = err.length();
+            char message[len + 1];
+            strcpy(message, err.c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+            int val = send(client_socket, message, length, 0 );
+            return;
+        }
+        int to_use = curr++;
+        string command = "sha1sum " + path + " >> " + to_string(to_use) + ".txt";
+        system(command.c_str());
+        fstream file;
+        file.open(to_string(to_use) + ".txt",ios::in);
+        string sum;
+        file >> sum;
+        command = "rm " + to_string(to_use) + ".txt";
+        system(command.c_str());
+        if(verify_sha1[path] != sum)
+        {
+            string err = "Error : Sha1sum mismatch.";
+            int len = err.length();
+            char message[len + 1];
+            strcpy(message, err.c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+            int val = send(client_socket, message, length, 0 );
+            return;
+        }
+        else
+        {
+            string err = "Sha1Sum matches :-)";
+            int len = err.length();
+            char message[len + 1];
+            strcpy(message, err.c_str());
+            int length = (int)strlen(message)+ 1;
+            utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
+            int val = send(client_socket, message, length, 0 );
+            return;
+        }
+
     }
 }
 
