@@ -484,6 +484,7 @@ int main()
 
         }
         if(input == 6) {
+            cout << "going ls" <<endl;
             char buffer1[10000] = {0};
             string to = "LS|";
             int len = to.length();

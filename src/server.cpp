@@ -28,6 +28,10 @@ map<string, string> fname_shasum;              // mapping of file path to its SH
 map<string, vector<spair>> uname_folder_own;
 map<string, vector<spair>> uname_folder_shared;
 map<string, string> verify_sha1;
+atomic<int> turn{0};
+string vm0 = "10.160.0.5";
+string vm1 = "10.160.0.4";
+
 
 inline bool file_exist(const std::string& name)
 {
@@ -588,7 +592,10 @@ void parser_request(string request, int client_socket, client_soc * client)
         }
         vector<string> my_files;
         for(auto itr : uname_folder_own[client->hashuname]) {
-            my_files.push_back(itr.first); 
+            string temp = itr.second + "/" + itr.first;
+            if(file_exist(temp) == true) {
+                my_files.push_back(itr.first);
+            } 
             cout << itr.first << endl;
         }
         vector<string> shared_files;
@@ -782,7 +789,7 @@ void parser_request(string request, int client_socket, client_soc * client)
         //     uname_folder_shared[other_name].push_back(dir_make); 
         //     string command = "mv " + client->dir + "/" + file_name + " " + dir_make;
         //     cout << "command reun : " << command << endl;
-        //     int result = system(command.c_str());
+        //     int result = system(command.c_strmap<string, int> vm_jobs;());
         //     string err;
         //     if(result == 0)
         //         err = "Info : File shared successfully";
@@ -912,9 +919,23 @@ void parser_request(string request, int client_socket, client_soc * client)
             if(sock < 0 )
                 printf("Socket creation failed");
             struct sockaddr_in servAddr;
-            inet_pton(AF_INET, "127.0.0.1", &servAddr.sin_addr);
-            servAddr.sin_family = AF_INET;
-            servAddr.sin_port = htons(8000);
+            if(turn == 0)
+            {
+                turn = 1;
+                inet_pton(AF_INET, vm0.c_str(), &servAddr.sin_addr);
+                servAddr.sin_family = AF_INET;
+                servAddr.sin_port = htons(8000);
+                
+            }
+            else
+            {
+                turn = 0;
+                inet_pton(AF_INET, vm1.c_str(), &servAddr.sin_addr);
+                servAddr.sin_family = AF_INET;
+                servAddr.sin_port = htons(8000);
+            }
+            
+            
             int connToServ = connect(sock, (struct sockaddr *) &servAddr , sizeof(servAddr));
             if(connToServ < 0 )
                 cout << "Connection to VM failed." << endl;
@@ -960,6 +981,7 @@ void parser_request(string request, int client_socket, client_soc * client)
                 }
             }
             outf.close();
+            close(sock);
             // Work of VM completed
             // Now send output file back to client using encryption
             rc = stat(out_file.c_str(), &FS);
