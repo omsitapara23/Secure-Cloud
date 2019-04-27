@@ -500,6 +500,15 @@ int main()
             string msg(buffer1);
             cout << msg << endl;
             if(msg == "LS OK") {
+                to = "LS Send Now";
+                int len = to.length();
+                char message[len + 1];
+                strcpy(message, to.c_str());
+                int length = (int)strlen(message)+ 1;
+                utils::aesEncryption(dff->getaesShaKey(), message, length);
+                int val = send(socket_id1, message, length, 0 );
+                if(val  < 0)
+                    cout << "send eroor" << endl;
                 int byteRec1 = recv(socket_id1, buffer1, 10000, 0);
                 utils::aesDecryption(dff->getaesShaKey(), buffer1, byteRec1);
                 string file_num(buffer1);
@@ -518,6 +527,13 @@ int main()
                     string recv_msg(buffer1);
                     cout << recv_msg << endl;
                     count++;
+                    to = "LS Send Now";
+                    int len = to.length();
+                    char message[len + 1];
+                    strcpy(message, to.c_str());
+                    int length = (int)strlen(message)+ 1;
+                    utils::aesEncryption(dff->getaesShaKey(), message, length);
+                    int val = send(socket_id1, message, length, 0 );
                 }
             }
         }

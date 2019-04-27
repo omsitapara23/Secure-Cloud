@@ -615,7 +615,12 @@ void parser_request(string request, int client_socket, client_soc * client)
         utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
         int val = send(client_socket, message, length, 0 );
         int count = 0;
+        bzero(buffer, 10000);
+        int byteRec1 = recv(client_socket, buffer, 10000, 0);
+        utils::aesDecryption(client->dh2->getaesShaKey(), buffer, byteRec1);
+        cout << string(buffer) << endl;
         while(count < my_files.size()) {
+            cout << my_files[count] << endl;
             int len = my_files[count].length();
             char message[len + 1];
             strcpy(message, my_files[count].c_str());
@@ -623,6 +628,9 @@ void parser_request(string request, int client_socket, client_soc * client)
             utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
             int val = send(client_socket, message, length, 0 );
             count++;
+            bzero(buffer, 10000);
+            int byteRec1 = recv(client_socket, buffer, 10000, 0);
+            utils::aesDecryption(client->dh2->getaesShaKey(), buffer, byteRec1);
         }
         count = 0;
         string sh = "SHARED with you : ";
@@ -640,6 +648,9 @@ void parser_request(string request, int client_socket, client_soc * client)
             utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
             int val = send(client_socket, message, length, 0 );
             count++;
+            bzero(buffer, 10000);
+            int byteRec1 = recv(client_socket, buffer, 10000, 0);
+            utils::aesDecryption(client->dh2->getaesShaKey(), buffer, byteRec1);
         }
     }
     else if(type == "DELETEUSER") {
