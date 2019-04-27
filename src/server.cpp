@@ -29,8 +29,8 @@ map<string, vector<spair>> uname_folder_own;
 map<string, vector<spair>> uname_folder_shared;
 map<string, string> verify_sha1;
 atomic<int> turn{0};
-string vm0 = "127.0.0.1";
-string vm1 = "127.0.0.1";
+string vm0 = "10.160.0.5";
+string vm1 = "10.160.0.4";
 
 
 inline bool file_exist(const std::string& name)

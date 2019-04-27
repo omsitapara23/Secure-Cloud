@@ -340,7 +340,9 @@ int main()
             if(recv_msg == "UPLOAD OK") {
                 ifstream in;
                 in.open(file_to_upload, ios::binary | ios::in);
-                int curPoint = 0;                
+                int curPoint = 0;   
+                cout  << "Uploading : " << flush;      
+                float pipe = (float)fs/100;       
                 while(!in.eof()) {
                     memset(buffer, 0, sizeof(buffer));
                     in.read(buffer, 10000);
@@ -349,15 +351,25 @@ int main()
                         int length = (int)strlen(buffer)+ 1;
                         utils::aesEncryption(dff->getaesShaKey(), buffer, 10000);
                         int s = send(socket_id1, buffer, 10000, 0);
-                        cout << "sent : " << length << endl;
+                        int progress = ceil((float)10000/pipe);
+                        for(int e = 0; e < progress; e++)
+                        {
+                            cout  << "=" << flush;
+                        }
+
                     } else {
                         int length = (int)strlen(buffer)+ 1;
                         utils::aesEncryption(dff->getaesShaKey(), buffer, fs + 10000 - curPoint+1);
                         int s = send(socket_id1, buffer, fs + 10000 - curPoint, 0);
-                        cout << "sent : " << fs + 10000 - curPoint << endl;
                         curPoint = fs;
+                        int progress = ceil((float)(fs + 10000 - curPoint+1)/pipe);
+                        for(int e = 0; e < progress; e++)
+                        {
+                            cout  << "=" << flush;
+                        }
                     }
                 }
+                cout << "> " << endl;
                 byteRec = recv(socket_id1, buffer, 10000, 0);
                 buffer[byteRec] = '\0';
                 recv_msg = string(buffer);
@@ -413,10 +425,16 @@ int main()
                 int packets = ceil((double)file_s/10000);
                 int packets_rec = 0;
                 cout << "LAst size " << last_size << " no of packets : " << packets << endl;
+                float one_pipe = (float)file_s/100;
+                cout << "Downloading : " << flush;
                 while(numBytes < file_s) {
                     memset(buffer, 0, 10000);
                     byteRecieved = recv(socket_id1, buffer, sizeof(buffer), 0);
-                    cout << "rec: " << byteRecieved << endl;
+                    int progressed = ceil(byteRecieved/one_pipe);
+                    for(int e =  0; e < progressed; e++)
+                    {
+                        cout << "=" << flush;
+                    }
                     // utils::aesDecryption(client->dh2->getaesShaKey(), buffer, byteRecieved+1);
                     numBytes += byteRecieved;
                     // for(int k = 0; k < byteRecieved; k++)
@@ -425,28 +443,23 @@ int main()
                     // }        // of << client->hashuname << endl;
                 // of << client->total_mem_consumed << endl;
                     count += byteRecieved;
-                    cout << "numBytes: " << numBytes << endl;
                     for (int j = 0; j < byteRecieved; j++)
                     {
                         buffer_sec[sec_count] = buffer[j];
                         sec_count++;
                         if(sec_count == 10000)
                         {
-                            cout << "Decryption of packet " << packets_rec << endl;
                             utils::aesDecryption(dff->getaesShaKey(), buffer_sec, 10001);
                             for(int k = 0; k < 10000; k++)
                             {
-                                cout << buffer[k];
                                 out << buffer_sec[k];
                             }
-                            cout << endl;
                             sec_count = 0;
                             packets_rec++;
                             memset(buffer_sec, 0, 10000);
                         }
                         else if(packets - packets_rec == 1 && sec_count == last_size)
                         {
-                            cout << "LAst packet " << endl;
                             utils::aesDecryption(dff->getaesShaKey(), buffer_sec, last_size+1);
                             for(int k = 0; k < last_size; k++)
                             {
@@ -456,6 +469,7 @@ int main()
 
                     }
                 }
+                cout << "> " << endl;
                 cout << "Download complete.." << endl;
 
             }
