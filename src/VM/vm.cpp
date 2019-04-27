@@ -18,7 +18,7 @@ vector<int> acc;
 atomic<int> job{0};
 void execute_func(int sock) {
     int job_loc = job++;
-    string dir_make = "VM_data/" + job_loc;
+    string dir_make = "VM_data/" + to_string(job_loc);
     mkdir(dir_make.c_str(), 0777);
     char buffer[10000];
     send(sock, "Connection Established", strlen("Connection Established"), 0);
@@ -53,7 +53,7 @@ void execute_func(int sock) {
     i++;
     fs = stoll(file_size);
     fstream code;
-    code.open(fname.c_str(), ios::binary | ios::out);
+    code.open(dir_make + "/" + fname.c_str(), ios::binary | ios::out);
     long long numBytes = 0;
     int byteRecieved;
     send(sock, "SEND FILE", strlen("SEND FILE"), 0);
@@ -67,9 +67,10 @@ void execute_func(int sock) {
         }
     }
     code.close();
+    string cmd = "cd " + dir_make;
     cout << "Recieved Source code." << endl;
     cout << "Compiling the source code..." << endl;
-    string com = com_cmd + " >" + dir_make +"/out.txt 2>&1";
+    string com = cmd + " && " + com_cmd + " > out.txt 2>&1";
     if(system(com.c_str()) != 0) {
         string exec_s, out_file;
         out_file = dir_make + "/out.txt";
@@ -101,7 +102,7 @@ void execute_func(int sock) {
         in.close();
     }
     else {
-        string run = run_cmd + " >" + dir_make +"/out.txt 2>&1";
+        string run = cmd + " && " + run_cmd + " > out.txt 2>&1";
         system(run.c_str());
         string exec_s, out_file;
         out_file = dir_make + "/out.txt";        
@@ -132,6 +133,8 @@ void execute_func(int sock) {
         }
         in.close();
     }
+    cmd = "rm -rf " + dir_make;
+    system(cmd.c_str()); 
     // string del = "rm -rf " + dir_make;
     // system(del.c_str());
 }
