@@ -26,8 +26,8 @@ map<string, vector<spair>> uname_folder_own;
 map<string, vector<spair>> uname_folder_shared;
 map<string, string> verify_sha1;
 atomic<int> turn{0};
-string vm0 = "10.160.0.5";
-string vm1 = "10.160.0.4";
+string vm0;
+string vm1;
 
 
 inline bool file_exist(const std::string& name)
@@ -1116,9 +1116,11 @@ void client_runner_th(client_soc client)
 int main()
 {
     port = 4000;
-    int n;
-    cout << "Enter max clients : ";
-    cin >> n;
+    int n = 100;
+    cout << "Enter ip of vm 1 : ";
+    cin >> vm0;
+    cout << "Enter ip of vm 2 : ";
+    cin >> vm1;
     int server_socket;
     int option = 1;
     client_soc client_socket[n];
