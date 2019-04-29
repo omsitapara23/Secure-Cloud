@@ -241,6 +241,7 @@ int main()
     {
         printf("Socket Error\n");
     }
+    cout << "Server is allocating resources for you, please stand by...:)" << endl;
     usleep(5000000);
     result = inet_pton(AF_INET, server_ip.c_str(), &server_addr1.sin_addr);
     if(result < 0)
@@ -254,7 +255,22 @@ int main()
 
     int input;
     while(true)
-    {
+    {   
+        cout << "----------------------------------------------" << endl;
+        cout << "Operations List : " << endl;
+        cout << "1. Create new account" << endl;
+        cout << "2. Login to an existing account" << endl;
+        cout << "3. Upload a file to the server" << endl;
+        cout << "4. Download a file from the server" << endl;
+        cout << "5. Delete a preuploaded file from the server" << endl;
+        cout << "6. List all your files" << endl;
+        cout << "7. Delete the user that is logged in" << endl;
+        cout << "8. Share a preuploaded file with another user" << endl;
+        cout << "9. Logout form the account logged in" << endl;
+        cout << "10. Run a code file on the server" << endl;
+        cout << "11. Verify an uploaded or shared file" << endl;
+        cout << "-1. Disconnect" << endl;
+        cout << "Choose an Option : ";
         cin >> input;
         if(input == 1)
         {
@@ -373,7 +389,6 @@ int main()
                 byteRec = recv(socket_id1, buffer, 10000, 0);
                 buffer[byteRec] = '\0';
                 recv_msg = string(buffer);
-                cout << "enc : " << recv_msg << endl;
                 utils::aesDecryption(dff->getaesShaKey(), buffer, byteRec);
                 recv_msg = string(buffer);
                 cout << recv_msg << endl;
@@ -397,7 +412,6 @@ int main()
             int byteRec = recv(socket_id1, buffer, 10000, 0);
             buffer[byteRec] = '\0';
             string recv_msg(buffer);
-            cout << "enc : " << recv_msg << endl;
             utils::aesDecryption(dff->getaesShaKey(), buffer, byteRec);
             recv_msg = string(buffer);
             cout << recv_msg << endl;
@@ -435,13 +449,7 @@ int main()
                     {
                         cout << "=" << flush;
                     }
-                    // utils::aesDecryption(client->dh2->getaesShaKey(), buffer, byteRecieved+1);
                     numBytes += byteRecieved;
-                    // for(int k = 0; k < byteRecieved; k++)
-                    // {
-                    //     out << buffer[k];
-                    // }        // of << client->hashuname << endl;
-                // of << client->total_mem_consumed << endl;
                     count += byteRecieved;
                     for (int j = 0; j < byteRecieved; j++)
                     {
@@ -491,14 +499,12 @@ int main()
             int byteRec = recv(socket_id1, buffer, 10000, 0);
             buffer[byteRec] = '\0';
             string recv_msg(buffer);
-            cout << "enc : " << recv_msg << endl;
             utils::aesDecryption(dff->getaesShaKey(), buffer, byteRec);
             recv_msg = string(buffer);
             cout << recv_msg << endl;
 
         }
         if(input == 6) {
-            cout << "going ls" <<endl;
             char buffer1[10000] = {0};
             string to = "LS|";
             int len = to.length();
@@ -526,7 +532,6 @@ int main()
                 int byteRec1 = recv(socket_id1, buffer1, 10000, 0);
                 utils::aesDecryption(dff->getaesShaKey(), buffer1, byteRec1);
                 string file_num(buffer1);
-                cout << file_num << endl;
                 int fn = stoi(file_num);
                 cout << fn << endl;
                 int count = 0;
