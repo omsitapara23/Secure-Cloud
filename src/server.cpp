@@ -19,9 +19,6 @@ atomic<int> total_Conn{0};
 atomic<int> port;
 mutex mtx;
 typedef pair<string, string> spair;
-// fstream f;
-// fstream of;
-// fstream shaf;
 map<string, string> uname_pass;                // mapping of user name to MD5 hash of its password
 map<string, long long> uname_mem;              // mapping of user name to memory consumed
 map<string, string> fname_shasum;              // mapping of file path to its SHA256 digest
@@ -117,10 +114,6 @@ void parser_request(string request, int client_socket, client_soc * client)
             utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
             int val = send(client_socket, message, length, 0 );
             uname_pass[hashuname] = hashpass;
-            // f << hashuname << endl;
-            // f << hashpass << endl;
-            // of << hashuname << endl;
-            // of << client->total_mem_consumed << endl;
             client->hashuname = hashuname;
             uname_mem[client->hashuname] = 0;
             return;
@@ -266,18 +259,6 @@ void parser_request(string request, int client_socket, client_soc * client)
             newItem = make_pair(file_name, client->dir);
             uname_folder_own[client->hashuname].push_back(newItem);
         }
-        // if(file_exist(file_path_out) == true) {
-        //     cout << "already exist" << endl;
-        //     string err = "UPLOAD Error : file " + file_name +" already exists.";
-        //     int len = err.length();
-        //     char message[len + 1];
-        //     strcpy(message, err.c_str());
-        //     int length = (int)strlen(message)+ 1;
-        //     utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
-        //     int val = send(client_socket, message, length, 0 );
-        //     cout << "exiting ex" << endl;
-        //     return;
-        // }
         string s = "UPLOAD OK";
         int len = s.length();
         char message[len + 1];
@@ -300,13 +281,7 @@ void parser_request(string request, int client_socket, client_soc * client)
             memset(buffer, 0, 10000);
             byteRecieved = recv(client_socket, buffer, sizeof(buffer), 0);
             cout << "rec: " << byteRecieved << endl;
-            // utils::aesDecryption(client->dh2->getaesShaKey(), buffer, byteRecieved+1);
             numBytes += byteRecieved;
-            // for(int k = 0; k < byteRecieved; k++)
-            // {
-            //     out << buffer[k];
-            // }        // of << client->hashuname << endl;
-        // of << client->total_mem_consumed << endl;
             count += byteRecieved;
             cout << "numBytes: " << numBytes << endl;
             for (int j = 0; j < byteRecieved; j++)
@@ -315,11 +290,9 @@ void parser_request(string request, int client_socket, client_soc * client)
                 sec_count++;
                 if(sec_count == 10000)
                 {
-                    cout << "Decryption of packet " << packets_rec << endl;
                     utils::aesDecryption(client->dh2->getaesShaKey(), buffer_sec, 10001);
                     for(int k = 0; k < 10000; k++)
                     {
-                        cout << buffer[k];
                         out << buffer_sec[k];
                     }
                     cout << endl;
@@ -342,8 +315,6 @@ void parser_request(string request, int client_socket, client_soc * client)
         
         client->total_mem_consumed += file_s;
         uname_mem[client->hashuname] += file_s;
-        // of << client->hashuname << endl;
-        // of << client->total_mem_consumed << endl;
         out.close();
         cout << "File successfully uploaded.." << endl;
         string err = "File successfully uploaded.";
@@ -446,12 +417,6 @@ void parser_request(string request, int client_socket, client_soc * client)
             }
             cout << "Verified sha1sum :)" << endl;  
             string err = "DOWNLOAD OK";
-            // int len = err.length();
-            // char message[len + 1];
-            // strcpy(message, err.c_str());
-            // int length = (int)strlen(message)+ 1;
-            // utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
-            // int val = send(client_socket, message, length, 0 );
             fstream in;
             in.open(path, ios::binary|ios::in);
             struct stat FS;
@@ -618,7 +583,6 @@ void parser_request(string request, int client_socket, client_soc * client)
         bzero(buffer, 10000);
         int byteRec1 = recv(client_socket, buffer, 10000, 0);
         utils::aesDecryption(client->dh2->getaesShaKey(), buffer, byteRec1);
-        cout << string(buffer) << endl;
         while(count < my_files.size()) {
             cout << my_files[count] << endl;
             int len = my_files[count].length();
@@ -770,52 +734,6 @@ void parser_request(string request, int client_socket, client_soc * client)
         utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
         int val = send(client_socket, message, length, 0 );
         return;
-        // string dir_make = "server_data/" + ur_name + "_" + other_name;
-        // if (mkdir(dir_make.c_str(), 0777) == -1) 
-        // {
-        //     cout << "Info :  " << " user already exists" << endl; 
-        //     string command = "mv " + client->dir + "/" + file_name + " " + dir_make;
-        //     cout << "command reun : " << command << endl;
-        //     int result = system(command.c_str());
-        //     string err;
-        //     if(result == 0)
-        //         err = "Info : File shared successfully";
-        //     else
-        //     {
-        //         err = "No such file or directory";
-        //     }
-            
-        //     int len = err.length();
-        //     char message[len + 1];
-        //     strcpy(message, err.c_str());
-        //     int length = (int)strlen(message)+ 1;
-        //     utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
-        //     int val = send(client_socket, message, length, 0 );
-        //     return;
-        // }
-        // else
-        // {
-        //     cout << "Directory created";   
-        //     uname_folder_own[client->hashuname].push_back(dir_make);
-        //     uname_folder_shared[other_name].push_back(dir_make); 
-        //     string command = "mv " + client->dir + "/" + file_name + " " + dir_make;
-        //     cout << "command reun : " << command << endl;
-        //     int result = system(command.c_strmap<string, int> vm_jobs;());
-        //     string err;
-        //     if(result == 0)
-        //         err = "Info : File shared successfully";
-        //     else
-        //     {
-        //         err = "No such file or directory";
-        //     }
-        //     int len = err.length();
-        //     char message[len + 1];
-        //     strcpy(message, err.c_str());
-        //     int length = (int)strlen(message)+ 1;
-        //     utils::aesEncryption(client->dh2->getaesShaKey(), message, length);
-        //     int val = send(client_socket, message, length, 0 );
-        //     return;
-        // }
 
     }
     else if(type == "LOGOUT") {
@@ -993,8 +911,6 @@ void parser_request(string request, int client_socket, client_soc * client)
             }
             outf.close();
             close(sock);
-            // Work of VM completed
-            // Now send output file back to client using encryption
             rc = stat(out_file.c_str(), &FS);
             fs = FS.st_size;
             in.open(out_file, ios::binary|ios::in);
@@ -1213,31 +1129,6 @@ int main()
     int channels = 0;
     int marker = 0;
     string u,p;
-    // f.open("server_data/uname_pass.txt", ios::in);
-    // while(!f.eof()) {
-    //     f >> u;
-    //     f >> p;
-    //     uname_pass[u] = p;
-    // }
-    // f.close();
-    // long long allcMem;
-    // of.open("server_data/uname_mem.txt", ios::in);
-    // while(!of.eof()) {
-    //     of >> u;
-    //     of >> allcMem;
-    //     uname_mem[u] = allcMem;
-    // }
-    // of.close();
-    // shaf.open("server_data/fname_shasum.txt", ios::in);
-    // while(!shaf.eof()) {
-    //     shaf >> u;
-    //     shaf >> p;
-    //     fname_shasum[u] = p;
-    // }
-    // shaf.close();
-    // f.open("server_data/uname_pass.txt", ios::out | ios::app);
-    // of.open("server_data/uname_mem.txt", ios::out | ios::app);
-    // shaf.open("server_data/fname_shasum.txt", ios::out | ios::app);
     struct sockaddr_in sever_address;
     char buffer[4096];
 
